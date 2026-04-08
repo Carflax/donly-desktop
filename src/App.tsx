@@ -8,9 +8,7 @@ import {
   Package,
   FileText,
   ChevronDown,
-  User,
   CheckCircle2,
-  AlertTriangle,
   Minus,
   Square,
   X
@@ -93,20 +91,20 @@ export default function App() {
       {/* Premium Titlebar */}
       <header className="draggable h-12 flex items-center justify-between px-4 shrink-0 z-50">
         <div className="flex items-center gap-3 no-drag">
-          <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
-            <Printer size={16} className="text-blue-400" />
+          <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center border border-accent/20">
+            <Printer size={16} className="text-accent" />
           </div>
-          <span className="text-sm font-bold tracking-tight text-white/90">Donly <span className="text-blue-400">Desktop</span></span>
+          <span className="text-sm font-bold tracking-tight text-white/90">Donly <span className="text-accent">Desktop</span></span>
         </div>
 
         <div className="flex items-center h-full no-drag">
-          <button onClick={() => getCurrentWindow().minimize()} className="w-10 h-full flex items-center justify-center hover:bg-white/5 text-slate-400 hover:text-white transition-colors">
+          <button onClick={() => getCurrentWindow().minimize()} className="w-10 h-full flex items-center justify-center hover:bg-white/5 text-white/50 hover:text-white transition-all">
             <Minus size={16} />
           </button>
-          <button onClick={() => getCurrentWindow().toggleMaximize()} className="w-10 h-full flex items-center justify-center hover:bg-white/5 text-slate-400 hover:text-white transition-colors">
+          <button onClick={() => getCurrentWindow().toggleMaximize()} className="w-10 h-full flex items-center justify-center hover:bg-white/5 text-white/50 hover:text-white transition-all">
             <Square size={12} />
           </button>
-          <button onClick={() => getCurrentWindow().close()} className="w-12 h-full flex items-center justify-center hover:bg-red-500 text-slate-400 hover:text-white transition-colors">
+          <button onClick={() => getCurrentWindow().close()} className="w-12 h-full flex items-center justify-center hover:bg-red-500 text-white/50 hover:text-white transition-all">
             <X size={18} />
           </button>
         </div>
@@ -121,14 +119,26 @@ export default function App() {
               <button
                 key={item.id}
                 onClick={() => setActiveNav(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                className={`w-full relative flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
                   activeNav === item.id
-                    ? "bg-blue-500 text-white shadow-lg shadow-blue-500/25"
-                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                    ? "bg-white/15 text-white border border-white/20 shadow-[0_0_25px_rgba(255,255,255,0.05)]"
+                    : "text-white hover:bg-white/10"
                 }`}
               >
-                <item.icon size={18} />
-                <span>{item.label}</span>
+                {activeNav === item.id && (
+                  <motion.div 
+                    layoutId="nav-glow"
+                    className="absolute inset-0 bg-accent/5 blur-xl rounded-full"
+                  />
+                )}
+                <item.icon size={18} className="text-accent" />
+                <span className="relative z-10">{item.label}</span>
+                {activeNav === item.id && (
+                  <motion.div 
+                    layoutId="nav-line"
+                    className="absolute left-1 w-1 h-4 bg-accent rounded-full"
+                  />
+                )}
               </button>
             ))}
           </nav>
@@ -140,7 +150,7 @@ export default function App() {
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold text-white truncate">Danilo Oliveira</p>
-                <p className="text-[10px] text-blue-400 font-medium tracking-wide uppercase">Desenvolvedor</p>
+                <p className="text-[10px] text-white/40 font-bold tracking-widest uppercase">Desenvolvedor</p>
               </div>
             </div>
           </div>
@@ -153,7 +163,7 @@ export default function App() {
           <section className="flex-1 flex flex-col p-8 overflow-hidden">
             <div className="mb-8">
               <h1 className="text-2xl font-bold text-white tracking-tight">Etiqueta de Envio</h1>
-              <p className="text-slate-400 text-sm mt-1">Configure as informações de impressão</p>
+              <p className="text-white/40 text-sm mt-1 font-medium">Configure as informações de impressão</p>
             </div>
 
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-6">
@@ -180,7 +190,7 @@ export default function App() {
                     {selectedTemplate === "dupla" && (
                       <div className="space-y-6">
                         <div className="space-y-4">
-                          <label className="text-[10px] uppercase tracking-widest font-bold text-blue-400">Lado Esquerdo</label>
+                          <label className="text-[10px] uppercase tracking-widest font-bold text-accent">Lado Esquerdo</label>
                           <Field label="Nome Item" value={data.dupla.nomeEsq} onChange={(v) => setData(p => ({...p, dupla: {...p.dupla, nomeEsq: v}}))} />
                           <div className="grid grid-cols-2 gap-4">
                             <Field label="Nº Caixa" value={data.dupla.caixaEsq} onChange={(v) => setData(p => ({...p, dupla: {...p.dupla, caixaEsq: v}}))} />
@@ -189,7 +199,7 @@ export default function App() {
                         </div>
                         <div className="h-px bg-white/5" />
                         <div className="space-y-4">
-                          <label className="text-[10px] uppercase tracking-widest font-bold text-slate-500">Lado Direito</label>
+                          <label className="text-[10px] uppercase tracking-widest font-bold text-white/40">Lado Direito</label>
                           <Field label="Nome Item" value={data.dupla.nomeDir} onChange={(v) => setData(p => ({...p, dupla: {...p.dupla, nomeDir: v}}))} />
                           <div className="grid grid-cols-2 gap-4">
                             <Field label="Nº Caixa" value={data.dupla.caixaDir} onChange={(v) => setData(p => ({...p, dupla: {...p.dupla, caixaDir: v}}))} />
@@ -214,7 +224,7 @@ export default function App() {
               </div>
 
               <div className="space-y-3">
-                <label className="text-xs font-semibold text-slate-500 ml-1 tracking-wide">MODELO DE ETIQUETA</label>
+                <label className="text-xs font-bold text-white/40 ml-1 tracking-widest">MODELO DE ETIQUETA</label>
                 <div className="relative">
                   <select
                     value={selectedTemplate}
@@ -225,7 +235,7 @@ export default function App() {
                       <option key={t.id} value={t.id} className="bg-black">{t.label} ({t.size})</option>
                     ))}
                   </select>
-                  <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                  <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-accent pointer-events-none" />
                 </div>
               </div>
             </div>
@@ -235,23 +245,23 @@ export default function App() {
               <button
                 onClick={handlePrint}
                 disabled={isPrinting}
-                className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98]"
+                className="flex-1 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-accent/10 transition-all active:scale-[0.98] border border-white/10"
               >
                 <Printer size={18} />
                 {isPrinting ? "Imprimindo..." : "Imprimir Etiqueta"}
-                {printStatus === "Pronto!" && <CheckCircle2 size={18} className="text-blue-200" />}
+                {printStatus === "Pronto!" && <CheckCircle2 size={18} className="text-white/80" />}
               </button>
             </div>
           </section>
 
           {/* Preview Sidebar */}
-          <section className="w-[420px] p-8 border-l border-white/5 flex flex-col">
+          <section className="w-[420px] p-8 flex flex-col">
             <div className="mb-6 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-white">Preview Final</h2>
-                <p className="text-xs text-slate-500 mt-0.5 uppercase tracking-widest">{currentTemplate.size} @ 203 DPI</p>
+                <p className="text-xs text-white/40 mt-0.5 uppercase tracking-widest font-bold">{currentTemplate.size} @ 203 DPI</p>
               </div>
-              <div className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400">LIVE</div>
+              <div className="px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-[10px] font-bold text-accent">LIVE</div>
             </div>
 
             <div className="flex-1 flex items-center justify-center p-8 rounded-2xl border border-white/5">
@@ -273,18 +283,18 @@ export default function App() {
                   <select
                     value={selectedPrinter}
                     onChange={e => setSelectedPrinter(e.target.value)}
-                    className="text-xs font-bold text-slate-300 bg-transparent outline-none cursor-pointer hover:text-blue-400 transition-colors"
+                    className="text-xs font-bold text-slate-300 bg-transparent outline-none cursor-pointer hover:text-accent transition-colors"
                   >
-                    {printers.length > 0 ? printers.map(p => <option key={p} className="bg-black">{p}</option>) : <option>Elgin L42 Pro (RAW)</option>}
+                    {printers.length > 0 ? printers.map(p => <option key={p} className="bg-slate-900">{p}</option>) : <option>Elgin L42 Pro (RAW)</option>}
                   </select>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Quantidade</span>
                   <div className="flex items-center gap-4 bg-white/5 p-1 rounded-lg border border-white/5">
-                    <button onClick={() => setCopies(Math.max(1, copies - 1))} className="w-8 h-8 rounded-md hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-colors font-bold">−</button>
+                    <button onClick={() => setCopies(Math.max(1, copies - 1))} className="w-8 h-8 rounded-md hover:bg-white/10 text-accent hover:text-accent-hover flex items-center justify-center transition-colors font-bold">−</button>
                     <span className="text-sm font-bold text-white w-4 text-center">{copies}</span>
-                    <button onClick={() => setCopies(copies + 1)} className="w-8 h-8 rounded-md hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-colors font-bold">+</button>
+                    <button onClick={() => setCopies(copies + 1)} className="w-8 h-8 rounded-md hover:bg-white/10 text-accent hover:text-accent-hover flex items-center justify-center transition-colors font-bold">+</button>
                   </div>
                 </div>
               </div>
@@ -299,12 +309,12 @@ export default function App() {
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">{label}</label>
+      <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest ml-1">{label}</label>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="input-field w-full rounded-xl px-4 py-2.5 text-sm font-medium placeholder:text-slate-700"
+        className="input-field w-full rounded-xl px-4 py-2.5 text-sm font-bold placeholder:text-white/20"
         placeholder={`Digite ${label.toLowerCase()}...`}
       />
     </div>

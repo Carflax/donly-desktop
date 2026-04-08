@@ -1,12 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #000000;
-  --color-surface: rgba(0, 0, 0, 0.2);
-  --color-accent: #3b82f6;
-  --color-accent-hover: #60a5fa;
-  --color-glass: rgba(255, 255, 255, 0.02);
-  --color-glass-border: rgba(255, 255, 255, 0.06);
+  --color-background: #020617;
+  --color-surface: rgba(15, 23, 42, 0.4);
+  --color-accent: #0096DA;
+  --color-accent-hover: #00AFFF;
+  --color-accent-secondary: #0077B6;
+  --color-glass: rgba(255, 255, 255, 0.01);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
 }
 
 @layer base {
@@ -49,21 +50,21 @@
     background: rgba(0, 0, 0, 0.25);
     backdrop-filter: blur(20px) saturate(100%);
     -webkit-backdrop-filter: blur(20px) saturate(100%);
-    border: 1px solid var(--color-glass-border);
     box-shadow: rgba(0, 0, 0, 0.55) 0px 5px 15px;
     border-radius: 20px;
   }
 
+  main {
+    margin: 20px;
+    border-radius: 10px;
+    border: 2px solid var(--color-glass-border);
+  }
+
   .glass-sidebar {
     background: transparent;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-
-    border-right: 1px solid var(--color-glass-border);
   }
 
   .glass-card {
-    background: rgba(30, 41, 59, 0.4);
     border: 1px solid var(--color-glass-border);
     backdrop-filter: blur(10px);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
