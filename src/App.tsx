@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   Printer,
@@ -332,6 +333,26 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("donly_copies", copies.toString());
   }, [copies]);
+
+  useEffect(() => {
+    const unlisten = listen<string>("remote-print", (event) => {
+      const code = event.payload;
+      const termo = code.trim();
+      const codigoFormatado = termo.padStart(5, "0");
+
+      const found = produtos.find(
+        (p: any) => p.ITE_CODITE === codigoFormatado || p.ITE_CODITE === termo,
+      );
+
+      if (found) {
+        addToQueue(found);
+      }
+    });
+
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, [produtos, selectedTemplate]);
 
   const pushToHistory = (elements: LabelElement[]) => {
     setHistory((prev) => {

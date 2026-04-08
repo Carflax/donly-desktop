@@ -4,6 +4,7 @@ use windows::core::{PCSTR, PSTR};
 use windows::Win32::Graphics::Printing::{
     ClosePrinter, EnumPrintersA, OpenPrinterA, StartDocPrinterA, StartPagePrinter, WritePrinter,
     EndDocPrinter, EndPagePrinter, PRINTER_ENUM_CONNECTIONS, PRINTER_ENUM_LOCAL, PRINTER_INFO_2A,
+    EndDocPrinter, EndPagePrinter, PRINTER_ENUM_CONNECTIONS, PRINTER_ENUM_LOCAL, PRINTER_INFO_4A,
     DOC_INFO_1A,
 };
 use windows::Win32::Foundation::HANDLE;
@@ -15,45 +16,48 @@ pub struct PrinterInfo {
 
 #[tauri::command]
 fn get_printers() -> Vec<String> {
-    let mut printers = Vec::new();
-    let mut cb_needed: u32 = 0;
-    let mut c_returned: u32 = 0;
-
     unsafe {
+        let mut pcb_needed: u32 = 0;
+        let mut pc_returned: u32 = 0;
+
         let _ = EnumPrintersA(
             PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS,
             PCSTR::null(),
-            2,
+            4,
             None,
-            &mut cb_needed,
-            &mut c_returned,
+            &mut pcb_needed,
+            &mut pc_returned,
         );
 
-        if cb_needed > 0 {
-            let mut buffer = vec![0u8; cb_needed as usize];
-            if EnumPrintersA(
-                PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS,
-                PCSTR::null(),
-                2,
-                Some(buffer.as_mut_slice()),
-                &mut cb_needed,
-                &mut c_returned,
-            ).is_ok() {
-                let info_ptr = buffer.as_ptr() as *const PRINTER_INFO_2A;
-                for i in 0..c_returned {
-                    let info = *info_ptr.add(i as usize);
-                    if !info.pPrinterName.is_null() {
-                        printers.push(info.pPrinterName.to_string().unwrap_or_default());
-                    }
+        if pcb_needed == 0 {
+            return Vec::new();
+        }
+
+        let mut buffer: Vec<u8> = vec![0; pcb_needed as usize];
+        if EnumPrintersA(
+            PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS,
+            PCSTR::null(),
+            4,
+            Some(buffer.as_mut_slice()),
+            &mut pcb_needed,
+            &mut pc_returned,
+        )
+        .is_ok()
+        {
+            let info: *const PRINTER_INFO_4A = buffer.as_ptr() as *const PRINTER_INFO_4A;
+            let mut printer_names = Vec::new();
+
+            for i in 0..pc_returned {
+                let printer_info = *info.add(i as usize);
+                if !printer_info.pPrinterName.is_null() {
+                    let name = printer_info.pPrinterName.to_string().unwrap_or_default();
+                    printer_names.push(name);
                 }
             }
+            return printer_names;
         }
     }
-
-    if printers.is_empty() || (printers.len() == 1 && printers[0].is_empty()) {
-        return vec!["Nenhuma impressora encontrada".to_string()];
-    }
-    printers
+    Vec::new()
 }
 
 #[tauri::command]

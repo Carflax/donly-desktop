@@ -35,4 +35,5 @@ windows = { version = "0.56", features = [
     "Win32_UI_WindowsAndMessaging",
     "Win32_UI_Controls",
 ] }
+tiny_http = "0.12"
 
