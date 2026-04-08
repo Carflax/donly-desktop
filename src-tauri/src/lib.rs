@@ -114,29 +114,9 @@ pub fn run() {
             #[cfg(target_os = "windows")]
             {
                 use window_vibrancy::apply_blur;
-                match apply_blur(&window, Some((0, 0, 0, 1))) {
-                    Ok(_) => println!("[Donly] Blur applied successfully"),
-                    Err(e) => println!("[Donly] Blur failed: {:?}", e),
-                }
-
-                // Remove native window border
-                use windows::Win32::UI::WindowsAndMessaging::*;
-                use windows::Win32::Foundation::HWND;
-                use tauri::raw_window_handle::HasWindowHandle;
-                if let Ok(handle) = window.window_handle() {
-                    if let raw_window_handle::RawWindowHandle::Win32(win32) = handle.as_raw() {
-                        let hwnd = HWND(win32.hwnd.get() as *mut _);
-                        unsafe {
-                            let style = GetWindowLongW(hwnd, GWL_STYLE) as u32;
-                            let new_style = style & !(WS_BORDER.0 | WS_DLGFRAME.0 | WS_THICKFRAME.0);
-                            SetWindowLongW(hwnd, GWL_STYLE, new_style as i32);
-                            let _ = SetWindowPos(hwnd, None, 0, 0, 0, 0,
-                                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_NOACTIVATE);
-                        }
-                    }
-                }
+                let _ = apply_blur(&window, Some((0, 0, 0, 0)));
+                let _ = window.set_shadow(false);
             }
-
             Ok(())
         })
         .run(tauri::generate_context!())

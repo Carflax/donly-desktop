@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "donly-desktop",
-        "width": 800,
-        "height": 600,
+        "width": 1200,
+        "height": 820,
         "decorations": false,
         "transparent": true
       }
