@@ -62,8 +62,9 @@ export function canvasToMonoBitmap(ctx: CanvasRenderingContext2D, width: number,
       const b = data[i + 2];
       const gray = (r + g + b) / 3;
       
-      // Threshold for black (gray < 180 as per python code)
-      if (gray < 180) {
+      // TSPL BITMAP: 1 = white, 0 = black (inverted from intuition)
+      // So we set bit 1 for LIGHT pixels (background), leave 0 for DARK pixels (text/elements)
+      if (gray >= 180) {
         const index = y * rowBytes + Math.floor(x / 8);
         const bit = 7 - (x % 8); // Bits are MSB first in TSPL
         bitmap[index] |= (1 << bit);

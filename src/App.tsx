@@ -535,13 +535,25 @@ export default function App() {
                                  </div>
 
                                  <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5 opacity-80">
+                                    <div className="space-y-1.5">
                                        <label className="text-[10px] font-bold text-accent uppercase tracking-widest ml-1">LARGURA (MM)</label>
-                                       <div className="input-field w-full rounded-xl px-4 py-2.5 text-sm font-black bg-white/5 border-white/20 text-accent flex items-center">{editorData.w} MM</div>
+                                       <input
+                                          type="number"
+                                          min={10}
+                                          value={editorData.w}
+                                          onChange={e => setEditorData(p => ({ ...p, w: Number(e.target.value) }))}
+                                          className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-2.5 text-sm font-black text-accent outline-none focus:border-accent/60 transition-all"
+                                       />
                                     </div>
                                     <div className="space-y-1.5">
                                        <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest ml-1">ALTURA (MM)</label>
-                                       <div className="input-field w-full rounded-xl px-4 py-2.5 text-sm font-black bg-white/5 border-white/20 text-white/80 flex items-center">{editorData.h} MM</div>
+                                       <input
+                                          type="number"
+                                          min={10}
+                                          value={editorData.h}
+                                          onChange={e => setEditorData(p => ({ ...p, h: Number(e.target.value) }))}
+                                          className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-2.5 text-sm font-black text-white/80 outline-none focus:border-accent/60 transition-all"
+                                       />
                                     </div>
                                  </div>
                               </div>

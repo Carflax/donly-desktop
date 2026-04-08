@@ -103,11 +103,16 @@ fn print_raw(printer_name: String, data: Vec<u8>) -> Result<String, String> {
     Ok("Impressão enviada com sucesso".into())
 }
 
+#[tauri::command]
+fn print_label(printer_name: String, tspl_content: Vec<u8>) -> Result<String, String> {
+    print_raw(printer_name, tspl_content)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![get_printers, print_raw])
+        .invoke_handler(tauri::generate_handler![get_printers, print_raw, print_label])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
 
