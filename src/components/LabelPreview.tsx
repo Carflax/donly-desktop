@@ -81,105 +81,102 @@ export default function LabelPreview({ data, width, height, dpi, onUpdateElement
     ctx.lineWidth = 1;
     ctx.strokeRect(px(0.5), px(0.5), canvas.width - px(1), canvas.height - px(1));
 
-    if (data.activeTab === "daniel") {
-      const d = data.daniel;
-      ctx.fillStyle = "black"; ctx.textAlign = "center";
-      const titleFS = d.item.length > 12 ? px(6) : px(8);
-      ctx.font = `bold ${titleFS}px Inter, sans-serif`;
-      ctx.fillText(d.item, canvas.width / 2, px(12));
-      ctx.strokeStyle = "#BBBBBB";
-      ctx.beginPath(); ctx.moveTo(px(5), px(14)); ctx.lineTo(canvas.width - px(5), px(14)); ctx.stroke();
-      ctx.textAlign = "left"; ctx.font = `${px(4)}px Inter, sans-serif`;
-      ctx.fillText(`Nº Caixa: ${d.caixa}`, px(10), px(20));
-      ctx.fillText(`Nº Pedido: ${d.pedido}`, px(10), px(26));
-      ctx.textAlign = "center"; ctx.font = `bold ${px(4.5)}px Inter, sans-serif`;
-      ctx.fillText(`PD: ${d.pd}   PC: ${d.peca}`, canvas.width / 2, px(34));
-    } else if (data.activeTab === "dupla") {
-      const d = data.dupla;
-      const mid = canvas.width / 2;
-      ctx.strokeStyle = "#BBBBBB"; ctx.beginPath(); ctx.moveTo(mid, px(5)); ctx.lineTo(mid, canvas.height - px(5)); ctx.stroke();
-      const drawSide = (xOff: number, s: { nome: string; caixa: string; bc: string }) => {
-        ctx.fillStyle = "black"; ctx.textAlign = "center";
-        const fsz = s.nome.length > 12 ? px(3.5) : px(4.5);
-        ctx.font = `bold ${fsz}px Inter, sans-serif`;
-        ctx.fillText(s.nome, xOff + mid / 2, px(8));
-        ctx.font = `${px(3)}px Inter, sans-serif`; ctx.fillText(`C: ${s.caixa}`, xOff + mid / 2, px(12));
-        if (s.bc) {
-           const tc = document.createElement("canvas");
-           try {
-              JsBarcode(tc, s.bc, { format: "CODE128", width: 2, height: 100, displayValue: false });
-              ctx.imageSmoothingEnabled = false; ctx.drawImage(tc, xOff + (mid - px(30))/2, px(18), px(30), px(8)); ctx.imageSmoothingEnabled = true;
-              ctx.font = `${px(3)}px Inter, sans-serif`; ctx.textAlign = "center"; ctx.fillText(s.bc, xOff + mid / 2, px(28));
-           } catch(e) {}
-        }
-      };
-      drawSide(0, { nome: d.nomeEsq, caixa: d.caixaEsq, bc: d.barcodeEsq });
-      drawSide(mid, { nome: d.nomeDir, caixa: d.caixaDir, bc: d.barcodeDir });
-    } else if (data.activeTab === "completa") {
-       const d = data.completa; ctx.fillStyle = "black"; ctx.textAlign = "center";
-       ctx.font = `bold ${px(4)}px Inter, sans-serif`; ctx.fillText(d.produto, canvas.width /2, px(10), canvas.width - px(10));
-       ctx.textAlign = "left"; ctx.font = `${px(3.5)}px Inter, sans-serif`;
-       ctx.fillText(`Caixa: ${d.caixa}`, px(10), px(20)); ctx.fillText(`Fornec: ${d.fornecedor}`, px(10), px(26));
-       if (d.barcode) {
-          const tc = document.createElement("canvas");
-          try { 
-            JsBarcode(tc, d.barcode, { format: "EAN13", width: 2, height: 100, displayValue: false });
-            ctx.imageSmoothingEnabled = false; ctx.drawImage(tc, (canvas.width - px(50))/2, px(32), px(50), px(11)); ctx.imageSmoothingEnabled = true;
-            ctx.font = `${px(3.5)}px Inter, sans-serif`; ctx.textAlign = "center"; ctx.fillText(d.barcode, canvas.width / 2, px(46));
-          } catch(e) {}
-       }
-    } else {
-       const elements = (data.custom && data.custom[data.activeTab]) || [];
-       elements.forEach(el => {
-         if (el.id === editingId) return;
-         ctx.save();
-         const w = el.type === "text" ? (el.content.length * (el.fontSize || 4) * 0.5) : (el.w || 20);
-         const h = el.type === "text" ? (el.fontSize || 4) : (el.h || 10);
-         const cx = el.type === "text" ? el.x : el.x + w/2;
-         const cy = el.type === "text" ? el.y - h/2 : el.y + h/2;
-         ctx.translate(px(cx), px(cy));
-         ctx.rotate(((el.rotation || 0) * Math.PI) / 180);
-         ctx.fillStyle = "black"; ctx.strokeStyle = "black"; ctx.lineWidth = el.strokeWidth || 1;
+    // Draw elements
+    const activeTab = data.activeTab;
+    const elements = (data.custom && data.custom[activeTab]) || [];
+    
+    elements.forEach(el => {
+      if (el.id === editingId) return;
+      ctx.save();
+      const w = el.type === "text" ? (el.content.length * (el.fontSize || 4) * 0.5) : (el.w || 20);
+      const h = el.type === "text" ? (el.fontSize || 4) : (el.h || 10);
+      
+      // Calculate rotation center
+      let cx = el.x;
+      let cy = el.y;
+
+      if (el.type === "text") {
+         // Anchor is at (x, y)
+         // We translate to the anchor point for easy rotation
+      } else {
+         // Anchor is top-left for other elements
+         cx = el.x + w/2;
+         cy = el.y + h/2;
+      }
+
+      ctx.translate(px(cx), px(cy));
+      ctx.rotate(((el.rotation || 0) * Math.PI) / 180);
+      ctx.fillStyle = "black"; 
+      ctx.strokeStyle = "black"; 
+      ctx.lineWidth = el.strokeWidth || 1;
+
+      if (el.type === "text") {
+        ctx.font = `${el.bold ? "bold " : ""}${el.italic ? "italic " : ""}${px(el.fontSize || 4)}px ${el.fontFamily || "Inter"}, sans-serif`;
+        ctx.textAlign = (el.align || "center") as CanvasTextAlign;
+        ctx.textBaseline = "middle";
+        ctx.fillText(el.content, 0, 0);
+      } else if (el.type === "barcode") {
+         const tc = document.createElement("canvas");
+         try { 
+           JsBarcode(tc, el.content, { format: el.bcFormat || "CODE128", width: 2, height: 100, displayValue: false });
+           ctx.imageSmoothingEnabled = false; 
+           ctx.drawImage(tc, px(-w/2), px(-h/2), px(w), px(h - 3)); 
+           ctx.imageSmoothingEnabled = true;
+           ctx.font = `${px(3)}px Inter, sans-serif`; 
+           ctx.textAlign = "center"; 
+           ctx.fillText(el.content, 0, px(h/2 - 1.5));
+         } catch(e) {}
+      } else if (el.type === "image") {
+         const cachedImg = imagesCache[el.content];
+         if (cachedImg) {
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(cachedImg, px(-w/2), px(-h/2), px(w), px(h));
+            ctx.imageSmoothingEnabled = true;
+         }
+      } else if (el.type === "line") {
+         ctx.beginPath(); ctx.moveTo(px(-w/2), 0); ctx.lineTo(px(w/2), 0); ctx.stroke();
+      } else if (el.type === "rect") {
+         ctx.strokeRect(px(-w/2), px(-h/2), px(w), px(h));
+      }
+
+      if (el.id === selectedId) {
+         ctx.strokeStyle = "#0096DA"; ctx.lineWidth = 1;
+         const rectW = el.type === "text" ? w : w;
+         const rectH = el.type === "text" ? h : h;
+         let rx = -rectW/2;
+         let ry = -rectH/2;
+
          if (el.type === "text") {
-           ctx.font = `${el.bold ? "bold " : ""}${px(el.fontSize || 4)}px ${el.fontFamily || "Inter"}, sans-serif`;
-           ctx.textAlign = "center"; ctx.fillText(el.content, 0, px(h/2));
-         } else if (el.type === "barcode") {
-            const tc = document.createElement("canvas");
-            try { 
-              JsBarcode(tc, el.content, { format: el.bcFormat || "CODE128", width: 2, height: 100, displayValue: false });
-              ctx.imageSmoothingEnabled = false; ctx.drawImage(tc, px(-w/2), px(-h/2), px(w), px(h - 3)); ctx.imageSmoothingEnabled = true;
-              ctx.font = `${px(3)}px Inter, sans-serif`; ctx.textAlign = "center"; ctx.fillText(el.content, 0, px(h/2));
-            } catch(e) {}
-         } else if (el.type === "image") {
-            const cachedImg = imagesCache[el.content];
-            if (cachedImg) {
-               ctx.imageSmoothingEnabled = false;
-               ctx.drawImage(cachedImg, px(-w/2), px(-h/2), px(w), px(h));
-               ctx.imageSmoothingEnabled = true;
-            }
-         } else if (el.type === "line") {
-            ctx.beginPath(); ctx.moveTo(px(-w/2), 0); ctx.lineTo(px(w/2), 0); ctx.stroke();
-         } else if (el.type === "rect") {
-            ctx.strokeRect(px(-w/2), px(-h/2), px(w), px(h));
+            if (el.align === "left") rx = 0;
+            else if (el.align === "right") rx = -rectW;
          }
-         if (el.id === selectedId) {
-            ctx.strokeStyle = "#0096DA"; ctx.lineWidth = 1;
-            ctx.strokeRect(px(-w/2) - 2, px(-h/2) - 2, px(w) + 4, px(h) + 4);
-            ctx.fillStyle = "white"; ctx.fillRect(px(w/2) - 6, px(h/2) - 6, 12, 12); ctx.strokeRect(px(w/2) - 6, px(h/2) - 6, 12, 12);
-            ctx.fillStyle = "#EF4444"; ctx.beginPath(); ctx.arc(px(w/2) + 4, px(-h/2) - 4, 11, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = "white"; ctx.lineWidth = 2.5;
-            ctx.beginPath(); ctx.moveTo(px(w/2) - 1, px(-h/2) - 9); ctx.lineTo(px(w/2) + 9, px(-h/2) + 1); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(px(w/2) + 9, px(-h/2) - 9); ctx.lineTo(px(w/2) - 1, px(-h/2) + 1); ctx.stroke();
-            ctx.strokeStyle = "#0096DA"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(0, px(-h/2) - 2); ctx.lineTo(0, px(-h/2) - 20); ctx.stroke();
-            ctx.fillStyle = "#0096DA"; ctx.beginPath(); ctx.arc(0, px(-h/2) - 20, 8, 0, Math.PI * 2); ctx.fill();
-         }
-         ctx.restore();
-       });
-       ctx.setLineDash([5, 5]); ctx.strokeStyle = "#0096DA";
-       if (guides.x !== undefined) { ctx.beginPath(); ctx.moveTo(px(guides.x), 0); ctx.lineTo(px(guides.x), canvas.height); ctx.stroke(); }
-       if (guides.y !== undefined) { ctx.beginPath(); ctx.moveTo(0, px(guides.y)); ctx.lineTo(canvas.width, px(guides.y)); ctx.stroke(); }
-       ctx.setLineDash([]);
-    }
+
+         ctx.strokeRect(px(rx) - 2, px(ry) - 2, px(rectW) + 4, px(rectH) + 4);
+         
+         // Resize Handle
+         ctx.fillStyle = "white"; 
+         ctx.fillRect(px(rx + rectW) - 6, px(ry + rectH) - 6, 12, 12); 
+         ctx.strokeRect(px(rx + rectW) - 6, px(ry + rectH) - 6, 12, 12);
+         
+         // Remove Handle
+         ctx.fillStyle = "#EF4444"; 
+         ctx.beginPath(); ctx.arc(px(rx + rectW) + 4, px(ry) - 4, 11, 0, Math.PI * 2); ctx.fill();
+         ctx.strokeStyle = "white"; ctx.lineWidth = 2.5;
+         ctx.beginPath(); ctx.moveTo(px(rx + rectW) - 1, px(ry) - 9); ctx.lineTo(px(rx + rectW) + 9, px(ry) + 1); ctx.stroke();
+         ctx.beginPath(); ctx.moveTo(px(rx + rectW) + 9, px(ry) - 9); ctx.lineTo(px(rx + rectW) - 1, px(ry) + 1); ctx.stroke();
+         
+         // Rotate Handle
+         ctx.strokeStyle = "#0096DA"; ctx.lineWidth = 1.5; 
+         ctx.beginPath(); ctx.moveTo(px(rx + rectW/2), px(ry) - 2); ctx.lineTo(px(rx + rectW/2), px(ry) - 20); ctx.stroke();
+         ctx.fillStyle = "#0096DA"; 
+         ctx.beginPath(); ctx.arc(px(rx + rectW/2), px(ry) - 20, 8, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    });
+    ctx.setLineDash([5, 5]); ctx.strokeStyle = "#0096DA";
+    if (guides.x !== undefined) { ctx.beginPath(); ctx.moveTo(px(guides.x), 0); ctx.lineTo(px(guides.x), canvas.height); ctx.stroke(); }
+    if (guides.y !== undefined) { ctx.beginPath(); ctx.moveTo(0, px(guides.y)); ctx.lineTo(canvas.width, px(guides.y)); ctx.stroke(); }
+    ctx.setLineDash([]);
   }, [data, width, height, dpi, guides, editingId, selectedId, imagesCache]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
