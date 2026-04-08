@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -314,6 +314,23 @@ export default function App() {
         elements: t.elements,
       });
   }, [selectedTemplate]);
+
+  const [isCollectorOnline, setIsCollectorOnline] = useState(false);
+  const collectorTimeoutRef = useRef<any>(null);
+
+  useEffect(() => {
+    const unlisten = listen<boolean>("collector-status", () => {
+      setIsCollectorOnline(true);
+      if (collectorTimeoutRef.current) clearTimeout(collectorTimeoutRef.current);
+      collectorTimeoutRef.current = setTimeout(() => {
+        setIsCollectorOnline(false);
+      }, 30000); // Fica "Online" por 30s após a última atividade
+    });
+    return () => {
+      unlisten.then((f) => f());
+      if (collectorTimeoutRef.current) clearTimeout(collectorTimeoutRef.current);
+    };
+  }, []);
 
   const [history, setHistory] = useState<LabelElement[][]>([]);
   const [historyStep, setHistoryStep] = useState(-1);
@@ -722,10 +739,10 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-6">
-            <div className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 flex items-center gap-3 group hover:border-white/20 transition-all cursor-pointer">
-              <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]" />
-              <span className="text-[10px] font-black text-white/60 tracking-widest uppercase">
-                Sistema Online
+            <div className={`px-4 py-2 rounded-xl border flex items-center gap-3 group transition-all cursor-pointer ${isCollectorOnline ? "bg-accent/10 border-accent/40" : "bg-white/5 border-white/10"}`}>
+              <div className={`w-2.5 h-2.5 rounded-full shadow-lg ${isCollectorOnline ? "bg-accent animate-pulse shadow-accent/40" : "bg-green-500 shadow-green-500/40"}`} />
+              <span className={`text-[10px] font-black tracking-widest uppercase ${isCollectorOnline ? "text-accent" : "text-white/60"}`}>
+                {isCollectorOnline ? "Coletor Conectado" : "Sistema Online"}
               </span>
             </div>
 

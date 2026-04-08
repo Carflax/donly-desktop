@@ -1,9 +1,9 @@
 use serde::Serialize;
+use tauri::Emitter;
 use tauri::Manager;
 use windows::core::{PCSTR, PSTR};
 use windows::Win32::Graphics::Printing::{
     ClosePrinter, EnumPrintersA, OpenPrinterA, StartDocPrinterA, StartPagePrinter, WritePrinter,
-    EndDocPrinter, EndPagePrinter, PRINTER_ENUM_CONNECTIONS, PRINTER_ENUM_LOCAL, PRINTER_INFO_2A,
     EndDocPrinter, EndPagePrinter, PRINTER_ENUM_CONNECTIONS, PRINTER_ENUM_LOCAL, PRINTER_INFO_4A,
     DOC_INFO_1A,
 };
@@ -112,6 +112,8 @@ fn print_label(printer_name: String, tspl_content: Vec<u8>) -> Result<String, St
     print_raw(printer_name, tspl_content)
 }
 
+use tiny_http::{Response, Server};
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -126,6 +128,54 @@ pub fn run() {
                 let _ = apply_blur(&window, Some((0, 0, 0, 0)));
                 let _ = window.set_shadow(false);
             }
+
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                if let Ok(server) = Server::http("0.0.0.0:3003") {
+                    for request in server.incoming_requests() {
+                        let url = request.url();
+                        
+                        // Rota para o Coletor verificar conexão e listar impressoras
+                        if url.contains("/impressoras") {
+                            let _ = handle.emit("collector-status", true);
+                            let printers = get_printers();
+                            let data: Vec<serde_json::Value> = printers.into_iter()
+                                .map(|name| serde_json::json!({ "name": name, "default": false }))
+                                .collect();
+                            
+                            let response_body = serde_json::json!({
+                                "success": true,
+                                "data": data
+                            }).to_string();
+                            
+                            let response = Response::from_string(response_body)
+                                .with_header(tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap());
+                            let _ = request.respond(response);
+                            continue;
+                        }
+
+                        if url.contains("/print") {
+                            let _ = handle.emit("collector-status", true);
+                            let code = url
+                                .split("code=")
+                                .nth(1)
+                                .unwrap_or("")
+                                .split('&')
+                                .next()
+                                .unwrap_or("");
+                            if !code.is_empty() {
+                                let _ = handle.emit("remote-print", code);
+                                let response = Response::from_string(format!("OK: Printing code {}", code));
+                                let _ = request.respond(response);
+                                continue;
+                            }
+                        }
+                        let response = Response::from_string("DonlyX Online");
+                        let _ = request.respond(response);
+                    }
+                }
+            });
+
             Ok(())
         })
         .run(tauri::generate_context!())
