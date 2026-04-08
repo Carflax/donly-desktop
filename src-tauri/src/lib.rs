@@ -114,11 +114,23 @@ fn print_label(printer_name: String, tspl_content: Vec<u8>) -> Result<String, St
 
 use tiny_http::{Response, Server};
 
+use std::sync::{Arc, Mutex};
+lazy_static::lazy_static! {
+    static ref SHARED_TEMPLATES: Arc<Mutex<String>> = Arc::new(Mutex::new("[]".to_string()));
+}
+
+#[tauri::command]
+fn update_templates(json: String) {
+    if let Ok(mut shared) = SHARED_TEMPLATES.lock() {
+        *shared = json;
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![get_printers, print_raw, print_label])
+        .invoke_handler(tauri::generate_handler![get_printers, print_raw, print_label, update_templates])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
 
@@ -134,7 +146,20 @@ pub fn run() {
                 if let Ok(server) = Server::http("0.0.0.0:3003") {
                     for request in server.incoming_requests() {
                         let url = request.url();
-                        
+
+                        // Rota para o Coletor baixar os modelos do DonlyX
+                        if url.contains("/templates") {
+                            let json_data = if let Ok(shared) = SHARED_TEMPLATES.lock() {
+                                shared.clone()
+                            } else {
+                                "[]".to_string()
+                            };
+                            let response = Response::from_string(json_data)
+                                .with_header(tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap());
+                            let _ = request.respond(response);
+                            continue;
+                        }
+
                         // Rota para o Coletor verificar conexão e listar impressoras
                         if url.contains("/impressoras") {
                             let _ = handle.emit("collector-status", true);
@@ -154,8 +179,37 @@ pub fn run() {
                             continue;
                         }
 
+                        // Rota para disparar fisicamente a impressão da fila
+                        if url.contains("/trigger-print") {
+                            let _ = handle.emit("collector-status", true);
+                            let _ = handle.emit("remote-trigger-print", true);
+                            let response = Response::from_string(serde_json::json!({ "success": true, "message": "Print triggered" }).to_string())
+                                .with_header(tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap());
+                            let _ = request.respond(response);
+                            continue;
+                        }
+
                         if url.contains("/print") {
                             let _ = handle.emit("collector-status", true);
+                            
+                            // Se houver parâmetro de template, avisa o frontend para trocar
+                            if url.contains("template=") {
+                                let template_id = url
+                                    .split("template=")
+                                    .nth(1)
+                                    .unwrap_or("")
+                                    .split('&')
+                                    .next()
+                                    .unwrap_or("");
+                                if !template_id.is_empty() {
+                                    let _ = handle.emit("remote-template", template_id);
+                                    let response = Response::from_string(serde_json::json!({ "success": true, "message": "Template switched" }).to_string())
+                                        .with_header(tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap());
+                                    let _ = request.respond(response);
+                                    continue;
+                                }
+                            }
+
                             let code = url
                                 .split("code=")
                                 .nth(1)
@@ -165,12 +219,16 @@ pub fn run() {
                                 .unwrap_or("");
                             if !code.is_empty() {
                                 let _ = handle.emit("remote-print", code);
-                                let response = Response::from_string(format!("OK: Printing code {}", code));
+                                let response_body = serde_json::json!({ "success": true, "message": format!("Printing code {}", code) }).to_string();
+                                let response = Response::from_string(response_body)
+                                    .with_header(tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap());
                                 let _ = request.respond(response);
                                 continue;
                             }
                         }
-                        let response = Response::from_string("DonlyX Online");
+                        let response_body = serde_json::json!({ "success": true, "message": "DonlyX Online" }).to_string();
+                        let response = Response::from_string(response_body)
+                            .with_header(tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..]).unwrap());
                         let _ = request.respond(response);
                     }
                 }

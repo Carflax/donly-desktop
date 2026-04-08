@@ -233,6 +233,7 @@ export default function App() {
   const [buscaCodigo, setBuscaCodigo] = useState("");
   const [produtoEncontrado, setProdutoEncontrado] = useState<any>(null);
   const [printQueue, setPrintQueue] = useState<any[]>([]);
+  const [remoteQueue, setRemoteQueue] = useState<any[]>([]);
 
   const [data, setData] = useState<LabelData>({
     activeTab: "daniel",
@@ -341,6 +342,8 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem("donly_templates", JSON.stringify(templatesList));
+    // Sincroniza com o servidor interno para o Coletor ver
+    invoke("update_templates", { json: JSON.stringify(templatesList) }).catch(() => {});
   }, [templatesList]);
 
   useEffect(() => {
@@ -353,23 +356,107 @@ export default function App() {
 
   useEffect(() => {
     const unlisten = listen<string>("remote-print", (event) => {
-      const code = event.payload;
-      const termo = code.trim();
-      const codigoFormatado = termo.padStart(5, "0");
+      const productCode = event.payload;
+      console.log("Recebido do Coletor:", productCode);
+      
+      // Busca o produto (tenta com e sem zeros à esquerda)
+      const cleanCode = productCode.replace(/^0+/, '');
+      const product = produtos.find((p) => {
+        const prodCodeClean = (p.ITE_CODITE || "").toString().replace(/^0+/, '');
+        const prodEanClean = (p.ITE_CODBAR || "").toString().replace(/^0+/, '');
+        return (
+          p.ITE_CODITE === productCode || 
+          p.ITE_CODBAR === productCode ||
+          prodCodeClean === cleanCode ||
+          prodEanClean === cleanCode
+        );
+      });
 
-      const found = produtos.find(
-        (p: any) => p.ITE_CODITE === codigoFormatado || p.ITE_CODITE === termo,
-      );
-
-      if (found) {
-        addToQueue(found);
+      if (product) {
+        console.log("Produto recebido do Coletor (Fila Oculta):", product.ITE_DESITE);
+        // Adiciona na fila remota (invisível no dashboard) para não poluir a tela
+        setRemoteQueue((prev) => [
+          ...prev, 
+          { ...product, queueId: Math.random().toString(36).substr(2, 9), templateId: selectedTemplate }
+        ]);
+      } else {
+        console.error("Produto não encontrado na lista atual:", productCode);
+        // Descomente se quiser ver o erro na tela:
+        // alert("Produto não encontrado: " + productCode);
       }
     });
 
     return () => {
-      unlisten.then((f) => f());
+      unlisten.then((unsub) => unsub());
     };
   }, [produtos, selectedTemplate]);
+
+  useEffect(() => {
+    const unlisten = listen<string>("remote-template", (event) => {
+      const templateId = event.payload;
+      console.log("Troca de template remota via Coletor:", templateId);
+      setSelectedTemplate(templateId);
+    });
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, []);
+
+  useEffect(() => {
+    const unlisten = listen<boolean>("remote-trigger-print", () => {
+      console.log("Disparo físico de impressão solicitado via Coletor (Fila Remota).");
+      handleRemotePrint();
+    });
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, [selectedPrinter, remoteQueue, copies, editorData, config]);
+
+  const handleRemotePrint = async () => {
+    if (!selectedPrinter || remoteQueue.length === 0) return;
+    
+    setIsPrinting(true);
+    setPrintStatus(`Imprimindo ${remoteQueue.length} etiquetas do Coletor...`);
+
+    try {
+      for (let i = 0; i < remoteQueue.length; i++) {
+        const item = remoteQueue[i];
+        aplicarProdutoNaEtiqueta(item);
+        
+        // Pequena pausa para garantir atualização do canvas
+        await new Promise(resolve => setTimeout(resolve, 60));
+
+        const canvas = document.querySelector("canvas");
+        if (!canvas) continue;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) continue;
+
+        const w_mm = editorData.w;
+        const h_mm = editorData.h;
+        const dpi = 203;
+        const pxW = Math.round((w_mm * dpi) / 25.4);
+        const pxH = Math.round((h_mm * dpi) / 25.4);
+
+        const bitmap = canvasToMonoBitmap(ctx, pxW, pxH);
+        const offX = Math.round((config.offsetX || 0) * (dpi / 25.4));
+        const offY = Math.round((config.offsetY || 0) * (dpi / 25.4));
+        
+        const tspl = generateTSPL(bitmap, pxW, pxH, w_mm, h_mm, copies, offX, offY);
+
+        await invoke("print_label", {
+          printerName: selectedPrinter,
+          tsplContent: Array.from(tspl),
+        });
+      }
+      
+      setRemoteQueue([]); // Limpa a fila oculta após imprimir
+      setPrintStatus("Fila do Coletor impressa!");
+    } catch (e: any) {
+      setPrintStatus("Erro remoto: " + e.toString());
+    } finally {
+      setIsPrinting(false);
+    }
+  };
 
   const pushToHistory = (elements: LabelElement[]) => {
     setHistory((prev) => {
