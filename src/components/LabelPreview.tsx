@@ -20,24 +20,24 @@ export type LabelElement = {
   fontFamily?: string;
   rotation?: number;
   fieldBinding?: string;
+  bcFontSize?: number;
+  bcLabelDist?: number;
+  lineHeight?: number;
 };
 
 export type LabelData = {
   activeTab: string;
-  daniel: {
+  padrao: {
     item: string;
     caixa: string;
     pedido: string;
     pd: string;
     peca: string;
   };
-  dupla: {
-    nomeEsq: string;
-    caixaEsq: string;
-    barcodeEsq: string;
-    nomeDir: string;
-    caixaDir: string;
-    barcodeDir: string;
+  padraozinha: {
+    nome: string;
+    codigo: string;
+    barcode: string;
   };
   completa: {
     produto: string;
@@ -173,17 +173,6 @@ export default function LabelPreview({
       canvas.height - px(1),
     );
 
-    // Draw Column Gap Visualizer
-    if (columns === 2 && gap) {
-      const singleW = (width - gap) / 2;
-      ctx.fillStyle = "rgba(0,0,0,0.03)";
-      ctx.fillRect(px(singleW), 0, px(gap), canvas.height);
-      ctx.setLineDash([2, 4]);
-      ctx.strokeStyle = "rgba(0,0,0,0.1)";
-      ctx.strokeRect(px(singleW), 0, px(gap), canvas.height);
-      ctx.setLineDash([]);
-    }
-
     // Draw elements
     const activeTab = data.activeTab;
     const elements = (data.custom && data.custom[activeTab]) || [];
@@ -196,7 +185,7 @@ export default function LabelPreview({
         el.type === "text"
           ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55)
           : el.w || 20;
-      const lineH = el.type === "text" ? (el.fontSize || 4) * 1.3 : 0;
+      const lineH = el.type === "text" ? (el.fontSize || 4) * (el.lineHeight || 1.3) : 0;
       const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
 
       // Calculate rotation center
@@ -238,11 +227,14 @@ export default function LabelPreview({
             displayValue: false,
           });
           ctx.imageSmoothingEnabled = false;
-          ctx.drawImage(tc, px(-w / 2), px(-h / 2), px(w), px(h - 5));
+          const tSize = Math.max(0.1, el.bcFontSize ?? 2.8);
+          const dist = el.bcLabelDist ?? 1;
+          ctx.drawImage(tc, px(-w / 2), px(-h / 2), px(w), px(h - tSize - dist));
           ctx.imageSmoothingEnabled = true;
-          ctx.font = `${px(2.8)}px Inter, sans-serif`;
+          ctx.font = `${Math.round(px(tSize))}px Inter, sans-serif`;
           ctx.textAlign = "center";
-          ctx.fillText(el.content, 0, px(h / 2 - 3));
+          ctx.textBaseline = "bottom";
+          ctx.fillText(el.content, 0, px(h / 2));
         } catch (e) {}
       } else if (el.type === "image") {
         const cachedImg = imagesCache[el.content];
@@ -325,7 +317,7 @@ export default function LabelPreview({
         ctx.save();
         const textFont = `${el.bold ? "bold " : ""}${el.italic ? "italic " : ""}${px(el.fontSize || 4)}px ${el.fontFamily || "Inter"}, sans-serif`;
         const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
-        const lineH = el.type === "text" ? (el.fontSize || 4) * 1.3 : 0;
+        const lineH = el.type === "text" ? (el.fontSize || 4) * (el.lineHeight || 1.3) : 0;
         const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
 
         let cx = el.x + offsetMm;
@@ -362,11 +354,14 @@ export default function LabelPreview({
                 displayValue: false,
             });
             ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(tc, px(-w / 2), px(-h / 2), px(w), px(h - 5));
+            const tSize = Math.max(0.1, el.bcFontSize ?? 2.8);
+            const dist = el.bcLabelDist ?? 1;
+            ctx.drawImage(tc, px(-w / 2), px(-h / 2), px(w), px(h - tSize - dist));
             ctx.imageSmoothingEnabled = true;
-            ctx.font = `${px(2.8)}px Inter, sans-serif`;
+            ctx.font = `${Math.round(px(tSize))}px Inter, sans-serif`;
             ctx.textAlign = "center";
-            ctx.fillText(el.content, 0, px(h / 2 - 3));
+            ctx.textBaseline = "bottom";
+            ctx.fillText(el.content, 0, px(h / 2));
           } catch (e) {}
         } else if (el.type === "image") {
           const cachedImg = imagesCache[el.content];
@@ -399,21 +394,6 @@ export default function LabelPreview({
       ctx.moveTo(px(guides.x), 0);
       ctx.lineTo(px(guides.x), canvas.height);
       ctx.stroke();
-    }
-
-    // Show Centers for columns
-    if (columns === 2) {
-      const singleW = (width - (gap || 0)) / 2;
-      const c1 = singleW / 2;
-      const c2 = width - c1;
-      ctx.setLineDash([10, 10]);
-      ctx.strokeStyle = "rgba(0,150,218,0.2)";
-      [c1, c2].forEach(c => {
-        ctx.beginPath();
-        ctx.moveTo(px(c), 0);
-        ctx.lineTo(px(c), canvas.height);
-        ctx.stroke();
-      });
     }
 
     if (guides.y !== undefined) {
@@ -610,16 +590,9 @@ export default function LabelPreview({
       const ecx = el.type === "text" ? fx : fx + w / 2;
       const ecy = el.type === "text" ? fy : fy + h / 2;
 
-      const snapPointsX = columns === 2 
-        ? [((width - (gap || 0)) / 2) / 2, width - (((width - (gap || 0)) / 2) / 2)]
-        : [cx];
-
-      for(const sx of snapPointsX) {
-        if (Math.abs(ecx - sx) < snap) {
-           fx = el.type === "text" ? sx : sx - w / 2;
-           g.x = sx;
-           break;
-        }
+      if (Math.abs(ecx - cx) < snap) {
+         fx = el.type === "text" ? cx : cx - w / 2;
+         g.x = cx;
       }
 
       if (Math.abs(ecy - cy) < snap) {

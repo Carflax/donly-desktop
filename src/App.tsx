@@ -155,131 +155,106 @@ type Template = {
 
 const DEFAULT_TEMPLATES: Template[] = [
   {
-    id: "daniel",
-    label: "Daniel",
+    id: "padrao",
+    label: "Padrão",
     size: "100x50mm",
     w: 100,
     h: 50,
     columns: 1,
     elements: [
       {
-        id: "d1",
+        id: "p1",
         type: "text",
         x: 50,
-        y: 12,
-        content: "ITEM 10",
-        fontSize: 8,
+        y: 10,
+        content: "NOME DO PRODUTO",
+        fontSize: 7,
         bold: true,
         align: "center",
         fieldBinding: "ITE_DESITE",
       },
-      { id: "d2", type: "line", x: 50, y: 14, content: "", w: 90, h: 1 },
       {
-        id: "d3",
-        type: "text",
-        x: 10,
-        y: 20,
-        content: "Nº Caixa: 00246",
-        fontSize: 4,
-        align: "left",
-      },
-      {
-        id: "d4",
-        type: "text",
-        x: 10,
-        y: 26,
-        content: "Nº Pedido: 80025956",
-        fontSize: 4,
-        align: "left",
-      },
-      {
-        id: "d5",
+        id: "p2",
         type: "text",
         x: 50,
-        y: 34,
-        content: "PD: 4501064590   PC: 20",
-        fontSize: 4.5,
+        y: 18,
+        content: "(00000) MARCA",
+        fontSize: 5,
+        align: "center",
+        fieldBinding: "ITE_CODITE",
+      },
+      {
+        id: "p3",
+        type: "text",
+        x: 50,
+        y: 28,
+        content: "00000",
+        fontSize: 10,
         bold: true,
         align: "center",
+      },
+      {
+        id: "p4",
+        type: "barcode",
+        x: 50,
+        y: 40,
+        content: "7890000000000",
+        w: 70,
+        h: 12,
+        fieldBinding: "ITE_CODBAR",
       },
     ],
   },
   {
-    id: "dupla",
-    label: "Dupla",
-    size: "103x30mm",
-    w: 103,
+    id: "padraozinha",
+    label: "Padrãozinha",
+    size: "50x30mm",
+    w: 50,
     h: 30,
     columns: 2,
     elements: [
       {
-        id: "l1",
+        id: "pz1",
         type: "text",
         x: 25,
-        y: 8,
-        content: "TESTE 1",
-        fontSize: 4.5,
+        y: 5,
+        content: "NOME DO PRODUTO",
+        fontSize: 4,
         bold: true,
         align: "center",
+        fieldBinding: "ITE_DESITE",
       },
       {
-        id: "l2",
-        type: "barcode",
+        id: "pz2",
+        type: "text",
+        x: 25,
+        y: 10,
+        content: "(00000) MARCA",
+        fontSize: 3.5,
+        align: "center",
+        fieldBinding: "ITE_CODITE",
+      },
+      {
+        id: "pz3",
+        type: "text",
         x: 25,
         y: 18,
-        content: "123456789",
-        w: 30,
-        h: 8,
-      },
-      {
-        id: "r1",
-        type: "text",
-        x: 78,
-        y: 8,
-        content: "TESTE 2",
-        fontSize: 4.5,
+        content: "00000",
+        fontSize: 7,
         bold: true,
         align: "center",
       },
       {
-        id: "r2",
+        id: "pz4",
         type: "barcode",
-        x: 78,
-        y: 18,
-        content: "123456789",
-        w: 30,
-        h: 8,
+        x: 25,
+        y: 26,
+        content: "7890000000000",
+        w: 35,
+        h: 7,
+        fieldBinding: "ITE_CODBAR",
       },
     ],
-  },
-  {
-    id: "fragil",
-    label: "Frágil",
-    size: "100x50mm",
-    w: 100,
-    h: 50,
-    columns: 1,
-    elements: [
-      {
-        id: "f1",
-        type: "text",
-        x: 50,
-        y: 25,
-        content: "FRÁGIL",
-        fontSize: 12,
-        bold: true,
-        align: "center",
-      },
-    ],
-  },
-  {
-    id: "completa",
-    label: "Completa",
-    size: "100x50mm",
-    w: 100,
-    h: 50,
-    columns: 1,
-    elements: [],
   },
 ];
 
@@ -320,7 +295,7 @@ export default function App() {
   });
 
   const [activeNav, setActiveNav] = useState("dashboard");
-  const [selectedTemplate, setSelectedTemplate] = useState("daniel");
+  const [selectedTemplate, setSelectedTemplate] = useState("padrao");
   const [isPrinting, setIsPrinting] = useState(false);
   const [printers, setPrinters] = useState<string[]>([]);
   const [selectedPrinter, setSelectedPrinter] = useState(
@@ -355,21 +330,18 @@ export default function App() {
   const [localIp, setLocalIp] = useState("");
 
   const [data, setData] = useState<LabelData>({
-    activeTab: "daniel",
-    daniel: {
-      item: "ITEM 10",
-      caixa: "00246",
-      pedido: "80025956",
-      pd: "4501064590",
-      peca: "20",
+    activeTab: "padrao",
+    padrao: {
+      item: "PRODUTO TESTE",
+      caixa: "00000",
+      pedido: "00000000",
+      pd: "0000000000",
+      peca: "0",
     },
-    dupla: {
-      nomeEsq: "TESTE 1",
-      caixaEsq: "00001",
-      barcodeEsq: "123456789",
-      nomeDir: "TESTE 2",
-      caixaDir: "00002",
-      barcodeDir: "123456789",
+    padraozinha: {
+      nome: "PRODUTO TESTE",
+      codigo: "00000",
+      barcode: "7890000000000",
     },
     completa: {
       produto: "TUBO EG BR PVC 100MM (10472) AMANCO",
@@ -1170,8 +1142,6 @@ export default function App() {
                               )?.h || config.height1
                             }
                             dpi={203}
-                            columns={templatesList.find(it => it.id === selectedTemplate)?.columns || 1}
-                            gap={config.gap}
                             onUpdateElement={(id, updates) => {
                               if ("content" in updates)
                                 updateDashboardElement(id, { content: updates.content });
@@ -1490,15 +1460,9 @@ export default function App() {
 
                                       {el.type === "text" && (
                                         <>
-                                          <div className="grid grid-cols-2 gap-2">
-                                            <div className="space-y-1.5">
-                                              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Tamanho (mm)</label>
-                                              <input type="number" value={el.fontSize} onChange={(e) => updateEditorElement(el.id, { fontSize: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Largura (mm)</label>
-                                              <input type="number" value={el.w ?? ""} placeholder="Auto" onChange={(e) => updateEditorElement(el.id, { w: e.target.value ? Number(e.target.value) : undefined })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
-                                            </div>
+                                          <div className="space-y-1.5">
+                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Altura da Linha (1.3)</label>
+                                            <input type="number" step="0.1" min="0.5" value={el.lineHeight ?? 1.3} onChange={(e) => updateEditorElement(el.id, { lineHeight: parseFloat(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
                                           </div>
                                           <div className="grid grid-cols-2 gap-2">
                                             <button
@@ -1585,16 +1549,45 @@ export default function App() {
                                       )}
 
                                       {el.type === "barcode" && (
-                                        <div className="space-y-1.5">
-                                          <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Formato</label>
-                                          <select value={el.bcFormat || "CODE128"} onChange={(e) => updateEditorElement(el.id, { bcFormat: e.target.value })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none">
-                                            <option value="CODE128">CODE 128</option>
-                                            <option value="CODE39">CODE 39</option>
-                                            <option value="EAN13">EAN-13</option>
-                                            <option value="EAN8">EAN-8</option>
-                                            <option value="ITF14">ITF-14</option>
-                                            <option value="UPC">UPC-A</option>
-                                          </select>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="space-y-1.5">
+                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Formato</label>
+                                            <select value={el.bcFormat || "CODE128"} onChange={(e) => updateEditorElement(el.id, { bcFormat: e.target.value })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none focus:border-accent">
+                                              <option value="CODE128">CODE 128</option>
+                                              <option value="CODE39">CODE 39</option>
+                                              <option value="EAN13">EAN-13</option>
+                                              <option value="EAN8">EAN-8</option>
+                                              <option value="ITF14">ITF-14</option>
+                                              <option value="UPC">UPC-A</option>
+                                            </select>
+                                          </div>
+                                          <div className="space-y-1.5">
+                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Tam. Fonte</label>
+                                            <input
+                                              type="number"
+                                              step="0.1"
+                                              min="0.1"
+                                              value={el.bcFontSize ?? 2.8}
+                                              onChange={(e) => {
+                                                const val = parseFloat(e.target.value);
+                                                updateEditorElement(el.id, { bcFontSize: isNaN(val) ? 2.8 : val });
+                                              }}
+                                              className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none focus:border-accent"
+                                            />
+                                          </div>
+                                          <div className="space-y-1.5">
+                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Dist. Números</label>
+                                            <input
+                                              type="number"
+                                              step="0.1"
+                                              value={el.bcLabelDist ?? 1}
+                                              onChange={(e) => {
+                                                const val = parseFloat(e.target.value);
+                                                updateEditorElement(el.id, { bcLabelDist: isNaN(val) ? 1 : val });
+                                              }}
+                                              className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none focus:border-accent"
+                                            />
+                                          </div>
                                         </div>
                                       )}
 
