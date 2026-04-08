@@ -270,7 +270,7 @@ export default function App() {
     setData((prev) => ({ ...prev, custom: customData }));
     
     // Sincroniza com o servidor Rust para o Coletor
-    invoke("update_templates", { json: JSON.stringify(templatesList) })
+    invoke<void>("update_templates", { json: JSON.stringify(templatesList) })
       .catch(() => {});
   }, [templatesList]);
 
@@ -359,7 +359,8 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("donly_templates", JSON.stringify(templatesList));
     // Sincroniza com o servidor interno para o Coletor ver
-    invoke("update_templates", { json: JSON.stringify(templatesList) }).catch(() => {});
+    invoke<void>("update_templates", { json: JSON.stringify(templatesList) })
+      .catch(() => {});
   }, [templatesList]);
 
   useEffect(() => {
@@ -431,6 +432,10 @@ export default function App() {
   const handleRemotePrint = async () => {
     if (!selectedPrinter || remoteQueue.length === 0) return;
     
+    // Busca o template atual para pegar as dimensões corretas
+    const currentTpl = templatesList.find(t => t.id === selectedTemplate);
+    if (!currentTpl) return;
+
     setIsPrinting(true);
     setPrintStatus(`Imprimindo ${remoteQueue.length} etiquetas do Coletor...`);
 
@@ -440,15 +445,15 @@ export default function App() {
         aplicarProdutoNaEtiqueta(item);
         
         // Pequena pausa para garantir atualização do canvas
-        await new Promise(resolve => setTimeout(resolve, 60));
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         const canvas = document.querySelector("canvas");
         if (!canvas) continue;
         const ctx = canvas.getContext("2d");
         if (!ctx) continue;
 
-        const w_mm = editorData.w;
-        const h_mm = editorData.h;
+        const w_mm = currentTpl.w;
+        const h_mm = currentTpl.h;
         const dpi = 203;
         const pxW = Math.round((w_mm * dpi) / 25.4);
         const pxH = Math.round((h_mm * dpi) / 25.4);
@@ -459,7 +464,7 @@ export default function App() {
         
         const tspl = generateTSPL(bitmap, pxW, pxH, w_mm, h_mm, copies, offX, offY);
 
-        await invoke("print_label", {
+        await invoke<string>("print_label", {
           printerName: selectedPrinter,
           tsplContent: Array.from(tspl),
         });
@@ -711,7 +716,7 @@ export default function App() {
           offY,
         );
 
-        await invoke("print_label", {
+        await invoke<string>("print_label", {
           printerName: selectedPrinter,
           tsplContent: Array.from(tspl),
         });
@@ -1479,23 +1484,26 @@ export default function App() {
                         
                         {localIp ? (
                           <>
-                            <div className="bg-white p-4 rounded-3xl shadow-2xl shadow-accent/20 transition-all duration-500 scale-100 group-hover:scale-105 mb-8 border-4 border-accent/20">
-                              <img 
-                                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`http://${localIp}:3003`)}`} 
-                                alt="QR Code"
-                                className="w-40 h-40"
-                                crossOrigin="anonymous"
-                              />
+                            <div className="relative group/qr">
+                              <div className="absolute -inset-4 bg-accent/20 rounded-[3rem] blur-2xl opacity-0 group-hover/qr:opacity-100 transition-opacity duration-700" />
+                              <div className="bg-white p-5 rounded-[2.5rem] shadow-2xl relative transition-all duration-700 scale-100 group-hover/qr:scale-105 border-4 border-accent/10">
+                                <img 
+                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`http://${localIp}:3003`)}`} 
+                                  alt="QR Code"
+                                  className="w-40 h-40"
+                                  crossOrigin="anonymous"
+                                />
+                              </div>
                             </div>
-                            <div className="space-y-3 z-10">
-                              <p className="text-lg font-black text-white px-2 uppercase">Parear Coletor</p>
-                              <p className="text-[10px] text-white/40 font-bold uppercase leading-relaxed px-6 tracking-wide">
-                                Escaneie com a câmera do coletor para conectar à este terminal automaticamente
-                              </p>
-                            </div>
-                            <div className="mt-8 flex items-center gap-2 bg-white/5 px-4 py-2 rounded-xl border border-white/10 group-hover:border-accent/40 transition-colors">
-                              <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                              <span className="text-[11px] font-mono font-bold text-accent tracking-widest">{localIp}:3003</span>
+                            
+                            <div className="mt-8 space-y-6 z-10">
+                              <div className="space-y-2">
+                                <p className="text-xl font-black text-accent uppercase tracking-tighter">Conector Ativo</p>
+                                <p className="text-[10px] text-white/40 font-bold uppercase leading-relaxed tracking-widest max-w-[240px]">
+                                  Escaneie o código acima com o coletor para iniciar a operação remota
+                                </p>
+                              </div>
+
                             </div>
                           </>
                         ) : (
