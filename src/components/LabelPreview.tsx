@@ -60,6 +60,8 @@ export default function LabelPreview({
   onInteractionEnd,
   drawingMode,
   onAreaCreated,
+  columns,
+  gap,
 }: {
   data: LabelData;
   width: number;
@@ -72,6 +74,8 @@ export default function LabelPreview({
   onInteractionEnd?: () => void;
   drawingMode?: "text" | null;
   onAreaCreated?: (bounds: { x: number; y: number; w: number; h: number }) => void;
+  columns?: 1 | 2;
+  gap?: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const draggingId = useRef<string | null>(null);
@@ -168,6 +172,17 @@ export default function LabelPreview({
       canvas.width - px(1),
       canvas.height - px(1),
     );
+
+    // Draw Column Gap Visualizer
+    if (columns === 2 && gap) {
+      const singleW = (width - gap) / 2;
+      ctx.fillStyle = "rgba(0,0,0,0.03)";
+      ctx.fillRect(px(singleW), 0, px(gap), canvas.height);
+      ctx.setLineDash([2, 4]);
+      ctx.strokeStyle = "rgba(0,0,0,0.1)";
+      ctx.strokeRect(px(singleW), 0, px(gap), canvas.height);
+      ctx.setLineDash([]);
+    }
 
     // Draw elements
     const activeTab = data.activeTab;
@@ -299,7 +314,85 @@ export default function LabelPreview({
       }
       ctx.restore();
     });
+
+    // Duplicate for second column if needed
+    if (columns === 2) {
+      const singleW = (width - (gap || 0)) / 2;
+      const offsetMm = singleW + (gap || 0);
+
+      elements.forEach((el) => {
+        if (el.id === editingId) return;
+        ctx.save();
+        const textFont = `${el.bold ? "bold " : ""}${el.italic ? "italic " : ""}${px(el.fontSize || 4)}px ${el.fontFamily || "Inter"}, sans-serif`;
+        const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
+        const lineH = el.type === "text" ? (el.fontSize || 4) * 1.3 : 0;
+        const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
+
+        let cx = el.x + offsetMm;
+        let cy = el.y;
+
+        if (el.type !== "text") {
+          cx = (el.x + offsetMm) + w / 2;
+          cy = el.y + h / 2;
+        }
+
+        ctx.translate(px(cx), px(cy));
+        ctx.rotate(((el.rotation || 0) * Math.PI) / 180);
+        ctx.fillStyle = "black";
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = el.strokeWidth || 1;
+
+        if (el.type === "text") {
+          ctx.font = textFont;
+          ctx.textAlign = (el.align || "center") as CanvasTextAlign;
+          ctx.textBaseline = "middle";
+          const wrapW = el.w ?? width;
+          const lines = wrapText(ctx, el.content, px(wrapW));
+          const totalH = lines.length * px(lineH);
+          lines.forEach((line, i) => {
+            ctx.fillText(line, 0, -totalH / 2 + px(lineH) * i + px(lineH) / 2);
+          });
+        } else if (el.type === "barcode") {
+          const tc = document.createElement("canvas");
+          try {
+            JsBarcode(tc, el.content, {
+                format: el.bcFormat || "CODE128",
+                width: 2,
+                height: 100,
+                displayValue: false,
+            });
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(tc, px(-w / 2), px(-h / 2), px(w), px(h - 5));
+            ctx.imageSmoothingEnabled = true;
+            ctx.font = `${px(2.8)}px Inter, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.fillText(el.content, 0, px(h / 2 - 3));
+          } catch (e) {}
+        } else if (el.type === "image") {
+          const cachedImg = imagesCache[el.content];
+          if (cachedImg) {
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(cachedImg, px(-w / 2), px(-h / 2), px(w), px(h));
+            ctx.imageSmoothingEnabled = true;
+          }
+        } else if (el.type === "line") {
+          ctx.beginPath();
+          ctx.moveTo(px(-w / 2), 0);
+          ctx.lineTo(px(w / 2), 0);
+          ctx.stroke();
+        } else if (el.type === "rect") {
+          if (el.fill) {
+            ctx.fillRect(px(-w / 2), px(-h / 2), px(w), px(h));
+          } else {
+            ctx.strokeRect(px(-w / 2), px(-h / 2), px(w), px(h));
+          }
+        }
+        ctx.restore();
+      });
+    }
+
     ctx.setLineDash([5, 5]);
+    ctx.lineWidth = 1;
     ctx.strokeStyle = "#0096DA";
     if (guides.x !== undefined) {
       ctx.beginPath();
@@ -307,12 +400,29 @@ export default function LabelPreview({
       ctx.lineTo(px(guides.x), canvas.height);
       ctx.stroke();
     }
+
+    // Show Centers for columns
+    if (columns === 2) {
+      const singleW = (width - (gap || 0)) / 2;
+      const c1 = singleW / 2;
+      const c2 = width - c1;
+      ctx.setLineDash([10, 10]);
+      ctx.strokeStyle = "rgba(0,150,218,0.2)";
+      [c1, c2].forEach(c => {
+        ctx.beginPath();
+        ctx.moveTo(px(c), 0);
+        ctx.lineTo(px(c), canvas.height);
+        ctx.stroke();
+      });
+    }
+
     if (guides.y !== undefined) {
       ctx.beginPath();
       ctx.moveTo(0, px(guides.y));
       ctx.lineTo(canvas.width, px(guides.y));
       ctx.stroke();
     }
+
     // Draw text area preview while dragging
     if (drawingRect) {
       const rx = Math.min(drawingRect.x1, drawingRect.x2);
@@ -327,7 +437,7 @@ export default function LabelPreview({
       ctx.strokeRect(px(rx), px(ry), px(rw), px(rh));
       ctx.setLineDash([]);
     }
-  }, [data, width, height, dpi, guides, editingId, selectedId, imagesCache, drawingRect]);
+  }, [data, width, height, dpi, guides, editingId, selectedId, imagesCache, drawingRect, columns, gap]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button === 2) return;
@@ -499,10 +609,19 @@ export default function LabelPreview({
       const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
       const ecx = el.type === "text" ? fx : fx + w / 2;
       const ecy = el.type === "text" ? fy : fy + h / 2;
-      if (Math.abs(ecx - cx) < snap) {
-        fx = el.type === "text" ? cx : cx - w / 2;
-        g.x = cx;
+
+      const snapPointsX = columns === 2 
+        ? [((width - (gap || 0)) / 2) / 2, width - (((width - (gap || 0)) / 2) / 2)]
+        : [cx];
+
+      for(const sx of snapPointsX) {
+        if (Math.abs(ecx - sx) < snap) {
+           fx = el.type === "text" ? sx : sx - w / 2;
+           g.x = sx;
+           break;
+        }
       }
+
       if (Math.abs(ecy - cy) < snap) {
         fy = el.type === "text" ? cy : cy - h / 2;
         g.y = cy;

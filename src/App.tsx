@@ -828,13 +828,38 @@ export default function App() {
         const ctx = canvas.getContext("2d");
         if (!ctx) throw new Error("Contexto 2D não encontrado");
 
-        const w_mm = editorData.w;
+        const isTwoCols = (item ? (templatesList.find(t => t.id === item.templateId)?.columns === 2) : (editorData.columns === 2));
+        const gap = config.gap || 0;
+        const singleW = editorData.w;
+        const totalW = isTwoCols ? (singleW * 2 + gap) : singleW;
         const h_mm = editorData.h;
         const dpi = 203;
-        const pxW = Math.round((w_mm * dpi) / 25.4);
-        const pxH = Math.round((h_mm * dpi) / 25.4);
 
-        const bitmap = canvasToMonoBitmap(ctx, pxW, pxH);
+        let finalCanvas = canvas;
+        let pxW = Math.round((totalW * dpi) / 25.4);
+        let pxH = Math.round((h_mm * dpi) / 25.4);
+
+        if (isTwoCols) {
+          const tempCanvas = document.createElement("canvas");
+          tempCanvas.width = pxW;
+          tempCanvas.height = pxH;
+          const tctx = tempCanvas.getContext("2d");
+          if (tctx) {
+            tctx.fillStyle = "white";
+            tctx.fillRect(0, 0, pxW, pxH);
+            // Desenha a primeira etiqueta
+            tctx.drawImage(canvas, 0, 0);
+            // Desenha a segunda etiqueta
+            const offsetPx = Math.round(((singleW + gap) * dpi) / 25.4);
+            tctx.drawImage(canvas, offsetPx, 0);
+            finalCanvas = tempCanvas;
+          }
+        }
+
+        const finalCtx = finalCanvas.getContext("2d");
+        if (!finalCtx) throw new Error("Falha ao processar imagem final");
+
+        const bitmap = canvasToMonoBitmap(finalCtx, pxW, pxH);
         const offX = Math.round((config.offsetX || 0) * (dpi / 25.4));
         const offY = Math.round((config.offsetY || 0) * (dpi / 25.4));
         
@@ -842,7 +867,7 @@ export default function App() {
           bitmap,
           pxW,
           pxH,
-          w_mm,
+          totalW,
           h_mm,
           copies,
           offX,
@@ -1145,6 +1170,8 @@ export default function App() {
                               )?.h || config.height1
                             }
                             dpi={203}
+                            columns={templatesList.find(it => it.id === selectedTemplate)?.columns || 1}
+                            gap={config.gap}
                             onUpdateElement={(id, updates) => {
                               if ("content" in updates)
                                 updateDashboardElement(id, { content: updates.content });
@@ -1305,6 +1332,21 @@ export default function App() {
                           setEditorData((p: any) => ({ ...p, name: v }))
                         }
                       />
+                      <div className="grid grid-cols-2 gap-4">
+                        <Field
+                          label="LARGURA (mm)"
+                          value={editorData.w.toString()}
+                          onChange={(v) => {
+                            const val = Number(v);
+                            setEditorData((p: any) => ({ ...p, w: val }));
+                          }}
+                        />
+                        <Field
+                          label="ALTURA (mm)"
+                          value={editorData.h.toString()}
+                          onChange={(v) => setEditorData((p: any) => ({ ...p, h: Number(v) }))}
+                        />
+                      </div>
                       <div className="space-y-1.5 pt-2">
                         <label className="text-[9px] font-bold text-white/60 uppercase tracking-widest ml-1">
                           LAYOUT DE COLUNAS
@@ -1315,9 +1357,7 @@ export default function App() {
                               key={c}
                               onClick={() => {
                                 const w =
-                                  c === 1
-                                    ? config.width1
-                                    : config.width2 * 2 + (config.gap || 0);
+                                  c === 1 ? config.width1 : config.width2;
                                 const h =
                                   c === 1 ? config.height1 : config.height2;
                                 setEditorData((p: any) => ({
@@ -1646,6 +1686,8 @@ export default function App() {
                       width={editorData.w}
                       height={editorData.h}
                       dpi={203}
+                      columns={1}
+                      gap={config.gap}
                       onUpdateElement={updateEditorElement}
                       selectedId={selectedId}
                       onSelectElement={setSelectedId}
