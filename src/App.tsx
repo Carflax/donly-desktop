@@ -24,6 +24,18 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  Truck,
+  Plane,
+  Ship,
+  Globe,
+  ClipboardList,
+  CalendarCheck,
+  Headphones,
+  Timer,
+  Scale,
+  PackageSearch,
+  Phone,
+  Clock,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import LabelPreview, {
@@ -35,10 +47,100 @@ import daniloImg from "./danilo.png";
 import appIcon from "./assets/icon.png";
 
 
+
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "editor", label: "Editor", icon: PenTool },
   { id: "settings", label: "Settings", icon: Settings },
+];
+
+const svgToDataUrl = (svg: string) =>
+  `data:image/svg+xml;base64,${btoa(svg)}`;
+
+const S = `viewBox="0 0 64 64" fill="none" stroke="black" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"`;
+const svg = (body: string) => svgToDataUrl(`<svg xmlns="http://www.w3.org/2000/svg" ${S}>${body}</svg>`);
+
+const LOGISTICS_ICONS = [
+  {
+    name: "Fragil",
+    icon: <Wine size={16} />,
+    data: svg(`<path d="M20 8h24l-4 20c-1 5 2 10 2 10H22s3-5 2-10Z"/><line x1="32" y1="38" x2="32" y2="54"/><line x1="22" y1="54" x2="42" y2="54"/>`),
+  },
+  {
+    name: "Cima",
+    icon: <MoveUp size={16} />,
+    data: svg(`<rect x="8" y="34" width="48" height="22" rx="2"/><line x1="20" y1="34" x2="20" y2="14"/><polyline points="12,22 20,14 28,22"/><line x1="44" y1="34" x2="44" y2="14"/><polyline points="36,22 44,14 52,22"/>`),
+  },
+  {
+    name: "Seco",
+    icon: <Umbrella size={16} />,
+    data: svg(`<path d="M8 30C8 17.8 19 8 32 8s24 9.8 24 22H8z"/><line x1="32" y1="30" x2="32" y2="48"/><path d="M32 48c0 3.3-2.7 6-6 6s-6-2.7-6-6"/><line x1="14" y1="44" x2="14" y2="52"/><line x1="22" y1="40" x2="22" y2="48"/><line x1="42" y1="40" x2="42" y2="48"/><line x1="50" y1="44" x2="50" y2="52"/>`),
+  },
+  {
+    name: "Caixa",
+    icon: <Package size={16} />,
+    data: svg(`<polygon points="32,6 58,20 58,48 32,62 6,48 6,20"/><line x1="32" y1="6" x2="32" y2="34"/><line x1="6" y1="20" x2="32" y2="34"/><line x1="58" y1="20" x2="32" y2="34"/>`),
+  },
+  {
+    name: "Rastrear",
+    icon: <PackageSearch size={16} />,
+    data: svg(`<path d="M30 8H8v42h22"/><line x1="8" y1="8" x2="24" y2="18"/><line x1="24" y1="8" x2="24" y2="50"/><circle cx="44" cy="42" r="12"/><line x1="52" y1="50" x2="60" y2="58"/>`),
+  },
+  {
+    name: "Balanca",
+    icon: <Scale size={16} />,
+    data: svg(`<line x1="32" y1="8" x2="32" y2="56"/><line x1="18" y1="56" x2="46" y2="56"/><line x1="6" y1="22" x2="58" y2="22"/><path d="M6 22l-4 14h16Z"/><path d="M58 22l-4 14h16Z"/><circle cx="32" cy="10" r="4"/>`),
+  },
+  {
+    name: "Caminhao",
+    icon: <Truck size={16} />,
+    data: svg(`<rect x="4" y="18" width="36" height="30" rx="2"/><path d="M40 28h12l8 14v8H40z"/><circle cx="14" cy="52" r="6"/><circle cx="50" cy="52" r="6"/><line x1="4" y1="46" x2="60" y2="46"/>`),
+  },
+  {
+    name: "Aviao",
+    icon: <Plane size={16} />,
+    data: svg(`<path d="M58 30L34 8l-6 6 10 14H8l-2 6 28 6v14l-8 2 2 4 10-4 10 4 2-4-8-2V40l28-6z"/>`),
+  },
+  {
+    name: "Navio",
+    icon: <Ship size={16} />,
+    data: svg(`<path d="M8 38l4 12h40l4-12z"/><rect x="16" y="22" width="32" height="16"/><rect x="24" y="10" width="16" height="12"/><line x1="32" y1="10" x2="32" y2="4"/><line x1="4" y1="50" x2="60" y2="50"/>`),
+  },
+  {
+    name: "Global",
+    icon: <Globe size={16} />,
+    data: svg(`<circle cx="32" cy="32" r="26"/><path d="M32 6c-8 6-14 15-14 26s6 20 14 26"/><path d="M32 6c8 6 14 15 14 26s-6 20-14 26"/><line x1="6" y1="32" x2="58" y2="32"/><line x1="10" y1="20" x2="54" y2="20"/><line x1="10" y1="44" x2="54" y2="44"/>`),
+  },
+  {
+    name: "Checklist",
+    icon: <ClipboardList size={16} />,
+    data: svg(`<rect x="10" y="8" width="44" height="50" rx="2"/><rect x="22" y="4" width="20" height="8" rx="2"/><polyline points="14,28 19,34 26,24"/><line x1="30" y1="28" x2="48" y2="28"/><polyline points="14,42 19,48 26,38"/><line x1="30" y1="42" x2="48" y2="42"/>`),
+  },
+  {
+    name: "Agenda",
+    icon: <CalendarCheck size={16} />,
+    data: svg(`<rect x="6" y="10" width="52" height="48" rx="2"/><line x1="6" y1="26" x2="58" y2="26"/><line x1="20" y1="4" x2="20" y2="16"/><line x1="44" y1="4" x2="44" y2="16"/><polyline points="22,42 28,48 42,36"/>`),
+  },
+  {
+    name: "Suporte",
+    icon: <Headphones size={16} />,
+    data: svg(`<path d="M10 32C10 19.9 19.9 10 32 10s22 9.9 22 22"/><rect x="6" y="32" width="10" height="16" rx="4"/><rect x="48" y="32" width="10" height="16" rx="4"/><path d="M54 48v4a8 8 0 0 1-8 8H32"/><circle cx="32" cy="60" r="3"/>`),
+  },
+  {
+    name: "Prazo",
+    icon: <Timer size={16} />,
+    data: svg(`<circle cx="32" cy="38" r="22"/><line x1="32" y1="38" x2="32" y2="24"/><line x1="32" y1="38" x2="44" y2="32"/><line x1="26" y1="8" x2="38" y2="8"/><line x1="56" y1="16" x2="52" y2="20"/>`),
+  },
+  {
+    name: "24h",
+    icon: <Clock size={16} />,
+    data: svg(`<circle cx="32" cy="32" r="26"/><line x1="32" y1="18" x2="32" y2="32"/><line x1="32" y1="32" x2="46" y2="40"/>`),
+  },
+  {
+    name: "Telefone",
+    icon: <Phone size={16} />,
+    data: svg(`<path d="M14 8h12l4 12-8 4c2 8 8 14 16 16l4-8 12 4v12c0 2-2 4-4 4C22 52 12 30 14 8z"/>`),
+  },
 ];
 
 type Template = {
@@ -230,6 +332,20 @@ export default function App() {
     () => Number(localStorage.getItem("donly_copies")) || 1,
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showFontMenu, setShowFontMenu] = useState(false);
+
+  const fonts = [
+    { name: "Inter", family: "'Inter', sans-serif" },
+    { name: "Arial", family: "Arial, sans-serif" },
+    { name: "Verdana", family: "Verdana, sans-serif" },
+    { name: "Tahoma", family: "Tahoma, sans-serif" },
+    { name: "Segoe UI", family: "'Segoe UI', sans-serif" },
+    { name: "Courier New", family: "'Courier New', monospace" },
+    { name: "Times New Roman", family: "'Times New Roman', serif" },
+    { name: "Georgia", family: "Georgia, serif" },
+    { name: "Impact", family: "Impact, sans-serif" },
+    { name: "Comic Sans MS", family: "'Comic Sans MS', cursive" },
+  ];
   const [textDrawMode, setTextDrawMode] = useState(false);
   const [produtos, setProdutos] = useState<any[]>([]);
   const [buscaCodigo, setBuscaCodigo] = useState("");
@@ -557,6 +673,19 @@ export default function App() {
     }));
   };
 
+  const updateDashboardElement = (id: string, updates: Partial<LabelElement>) => {
+    setData((prev) => ({
+      ...prev,
+      custom: {
+        ...prev.custom,
+        [selectedTemplate]: (prev.custom[selectedTemplate] || []).map((el) =>
+          el.id === id ? { ...el, ...updates } : el
+        ),
+      },
+    }));
+  };
+
+
   const removeEditorElement = (id: string) => {
     const newElements = editorData.elements.filter((el) => el.id !== id);
     setEditorData((p) => ({ ...p, elements: newElements }));
@@ -606,6 +735,8 @@ export default function App() {
   const loadTemplateToEditor = (tId: string) => {
     const t = templatesList.find((x) => x.id === tId);
     if (t) {
+      setSelectedId(null);
+      setTextDrawMode(false);
       setEditorData({
         name: t.label,
         w: t.w || config.width1,
@@ -909,7 +1040,7 @@ export default function App() {
                           {templatesList.map((t) => (
                             <div key={t.id} className="relative group">
                               <button
-                                onClick={() => setSelectedTemplate(t.id)}
+                                onClick={() => { setSelectedTemplate(t.id); setSelectedId(null); }}
                                 className={`w-full text-left p-5 rounded-2xl border transition-all relative ${
                                   selectedTemplate === t.id
                                     ? "bg-accent/10 border-accent/40 shadow-xl shadow-accent/5 ring-1 ring-accent/20"
@@ -1014,6 +1145,10 @@ export default function App() {
                               )?.h || config.height1
                             }
                             dpi={203}
+                            onUpdateElement={(id, updates) => {
+                              if ("content" in updates)
+                                updateDashboardElement(id, { content: updates.content });
+                            }}
                           />
                         </div>
                       </div>
@@ -1253,7 +1388,8 @@ export default function App() {
                           className="glass-card rounded-2xl p-5 space-y-4 border-accent/20 bg-accent/5"
                         >
                           {(() => {
-                            const el = editorData.elements.find((e) => e.id === selectedId)!;
+                            const el = editorData.elements.find((e) => e.id === selectedId);
+                            if (!el) { setSelectedId(null); return null; }
                             return (
                               <div className="space-y-6">
                                   <div className="flex items-center justify-between border-b border-white/5 pb-4">
@@ -1270,21 +1406,18 @@ export default function App() {
                                       <div className="space-y-3">
                                         <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Símbolos Disponíveis</label>
                                         <div className="grid grid-cols-4 gap-2">
-                                          {[
-                                            { name: "Fragile", icon: <Wine size={16} />, data: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTEyIDJ2MTBtMCAwIDUtNW0tNSA1LTUtNW01IDEwdjVtLTUgMGgxMCIvPjwvc3ZnPg==" },
-                                            { name: "Up", icon: <MoveUp size={16} />, data: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTEyIDV2MTRtLTcgLTdsNyAtN2w3IDciLz48L3N2Zz4=" },
-                                            { name: "Keep Dry", icon: <Umbrella size={16} />, data: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTEyIDIydjAgbTAgMG0wIDAgTTEyIDIyYTIgMiAwIDAgMSA0IDB2LTEuNSIvPjxwYXRoIGQ9Ik0yMCAxM2MtLjUgMC0xLS41LTEuNS0xYTMgMyAwIDAgMC02IDAgMyAzIDAgMCAwLTYgMGMtLjUgMC0xIC41LTEuNSAxYTEwIDEwIDAgMCAxIDIwIDB6Ii8+PC9zdmc+" },
-                                            { name: "Package", icon: <Package size={16} />, data: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTIyIDEyaC00bC0zIDloLTlsLTMtOUgybTcgNGg2Ii8+PHBhdGggZD0iTTIxIDdsLTkgMTAtOS0xMFY1YTIgMiAwIDAgMSAyLTJoMTRhMiAyIDAgMCAxIDIgMnoiLz48L3N2Zz4=" }
-                                          ].map((icon) => (
+                                          {LOGISTICS_ICONS.map((icon) => (
                                             <button
                                               key={icon.name}
+                                              title={icon.name}
                                               onClick={() => {
                                                 updateEditorElement(el.id, { content: icon.data, w: 20, h: 20 });
                                                 pushToHistory(editorData.elements);
                                               }}
-                                              className="flex flex-col items-center justify-center p-2 rounded-xl bg-black/40 border border-white/5 hover:border-accent/40 transition-all text-white/40 hover:text-accent shadow-inner"
+                                              className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl bg-black/40 border border-white/5 hover:border-accent/40 transition-all text-white/40 hover:text-accent shadow-inner"
                                             >
                                               {icon.icon}
+                                              <span className="text-[8px] leading-none">{icon.name}</span>
                                             </button>
                                           ))}
                                         </div>
@@ -1332,16 +1465,28 @@ export default function App() {
 
                                       {el.type === "text" && (
                                         <>
-                                          <div className="grid grid-cols-2 gap-3">
+                                          <div className="grid grid-cols-2 gap-2">
                                             <div className="space-y-1.5">
-                                              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Fonte</label>
+                                              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Tamanho (mm)</label>
                                               <input type="number" value={el.fontSize} onChange={(e) => updateEditorElement(el.id, { fontSize: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
                                             </div>
+                                            <div className="space-y-1.5">
+                                              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Largura (mm)</label>
+                                              <input type="number" value={el.w ?? ""} placeholder="Auto" onChange={(e) => updateEditorElement(el.id, { w: e.target.value ? Number(e.target.value) : undefined })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
+                                            </div>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-2">
                                             <button
                                               onClick={() => updateEditorElement(el.id, { bold: !el.bold })}
-                                              className={`mt-5 rounded-xl border text-[10px] font-black transition-all ${el.bold ? "bg-accent text-black border-accent" : "bg-black/40 text-white/40 border-white/10"}`}
+                                              className={`py-2 rounded-xl border text-[10px] font-black transition-all ${el.bold ? "bg-accent text-black border-accent" : "bg-black/40 text-white/40 border-white/10"}`}
                                             >
                                               BOLD
+                                            </button>
+                                            <button
+                                              onClick={() => updateEditorElement(el.id, { italic: !el.italic })}
+                                              className={`py-2 rounded-xl border text-[10px] font-black italic transition-all ${el.italic ? "bg-accent text-black border-accent" : "bg-black/40 text-white/40 border-white/10"}`}
+                                            >
+                                              ITALIC
                                             </button>
                                           </div>
                                           <div className="space-y-1.5">
@@ -1358,32 +1503,109 @@ export default function App() {
                                               ))}
                                             </div>
                                           </div>
+                                          <div className="space-y-1.5 relative">
+                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Fonte</label>
+                                            <button
+                                              onClick={() => setShowFontMenu(!showFontMenu)}
+                                              className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2.5 outline-none flex items-center justify-between group hover:border-accent/40 transition-all"
+                                            >
+                                              <span style={{ fontFamily: el.fontFamily || "Inter" }}>
+                                                {el.fontFamily || "Inter"}
+                                              </span>
+                                              <ChevronDown size={14} className={`text-white/20 group-hover:text-accent transition-transform ${showFontMenu ? 'rotate-180' : ''}`} />
+                                            </button>
+
+                                            <AnimatePresence>
+                                              {showFontMenu && (
+                                                <>
+                                                  <div
+                                                    className="fixed inset-0 z-[100]"
+                                                    onClick={() => setShowFontMenu(false)}
+                                                  />
+                                                  <motion.div
+                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                    className="absolute bottom-full left-0 w-full mb-2 bg-[#0A0F1E] border border-white/10 rounded-2xl shadow-2xl z-[101] overflow-hidden max-h-[280px] overflow-y-auto custom-scrollbar"
+                                                  >
+                                                    <div className="p-2 space-y-1">
+                                                      {fonts.map((f) => (
+                                                        <button
+                                                          key={f.name}
+                                                          onClick={() => {
+                                                            updateEditorElement(el.id, { fontFamily: f.name });
+                                                            setShowFontMenu(false);
+                                                          }}
+                                                          className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group ${
+                                                            (el.fontFamily || "Inter") === f.name
+                                                              ? "bg-accent text-black"
+                                                              : "text-white/60 hover:bg-white/5 hover:text-white"
+                                                          }`}
+                                                        >
+                                                          <span style={{ fontFamily: f.family, fontSize: '14px' }}>
+                                                            {f.name}
+                                                          </span>
+                                                          {(el.fontFamily || "Inter") === f.name && (
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-black" />
+                                                          )}
+                                                        </button>
+                                                      ))}
+                                                    </div>
+                                                  </motion.div>
+                                                </>
+                                              )}
+                                            </AnimatePresence>
+                                          </div>
                                         </>
                                       )}
 
-                                      {el.type === "text" ? (
+                                      {el.type === "barcode" && (
                                         <div className="space-y-1.5">
-                                          <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Família da Fonte</label>
-                                          <select value={el.fontFamily || "Inter"} onChange={(e) => updateEditorElement(el.id, { fontFamily: e.target.value })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none">
-                                            <option value="Inter">Inter (Padrão)</option>
-                                            <option value="Segoe UI">Segoe UI</option>
-                                            <option value="Arial">Arial</option>
-                                            <option value="Verdana">Verdana</option>
-                                            <option value="Tahoma">Tahoma</option>
-                                            <option value="Times New Roman">Times New Roman</option>
-                                            <option value="Georgia">Georgia</option>
-                                            <option value="Courier New">Courier New</option>
-                                            <option value="Impact">Impact</option>
+                                          <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Formato</label>
+                                          <select value={el.bcFormat || "CODE128"} onChange={(e) => updateEditorElement(el.id, { bcFormat: e.target.value })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none">
+                                            <option value="CODE128">CODE 128</option>
+                                            <option value="CODE39">CODE 39</option>
+                                            <option value="EAN13">EAN-13</option>
+                                            <option value="EAN8">EAN-8</option>
+                                            <option value="ITF14">ITF-14</option>
+                                            <option value="UPC">UPC-A</option>
                                           </select>
                                         </div>
-                                      ) : (
-                                        <div className="grid grid-cols-2 gap-3">
+                                      )}
+
+                                      {(el.type === "line" || el.type === "rect") && (
+                                        <div className="grid grid-cols-2 gap-2">
                                           <div className="space-y-1.5">
-                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">W</label>
+                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">W (mm)</label>
                                             <input type="number" value={el.w} onChange={(e) => updateEditorElement(el.id, { w: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
                                           </div>
                                           <div className="space-y-1.5">
-                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">H</label>
+                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">H (mm)</label>
+                                            <input type="number" value={el.h} onChange={(e) => updateEditorElement(el.id, { h: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
+                                          </div>
+                                          <div className="space-y-1.5">
+                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Espessura</label>
+                                            <input type="number" min={0.5} step={0.5} value={el.strokeWidth ?? 1} onChange={(e) => updateEditorElement(el.id, { strokeWidth: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
+                                          </div>
+                                          {el.type === "rect" && (
+                                            <button
+                                              onClick={() => updateEditorElement(el.id, { fill: !el.fill })}
+                                              className={`mt-5 rounded-xl border text-[10px] font-black transition-all ${el.fill ? "bg-accent text-black border-accent" : "bg-black/40 text-white/40 border-white/10"}`}
+                                            >
+                                              PREENCHIDO
+                                            </button>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {el.type === "image" && (
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="space-y-1.5">
+                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">W (mm)</label>
+                                            <input type="number" value={el.w} onChange={(e) => updateEditorElement(el.id, { w: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
+                                          </div>
+                                          <div className="space-y-1.5">
+                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">H (mm)</label>
                                             <input type="number" value={el.h} onChange={(e) => updateEditorElement(el.id, { h: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
                                           </div>
                                         </div>

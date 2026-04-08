@@ -207,15 +207,12 @@ export default function LabelPreview({
         ctx.font = textFont;
         ctx.textAlign = (el.align || "center") as CanvasTextAlign;
         ctx.textBaseline = "middle";
-        if (el.w !== undefined) {
-          const lines = wrapText(ctx, el.content, px(el.w));
-          const totalH = lines.length * px(lineH);
-          lines.forEach((line, i) => {
-            ctx.fillText(line, 0, -totalH / 2 + px(lineH) * i + px(lineH) / 2);
-          });
-        } else {
-          ctx.fillText(el.content, 0, 0);
-        }
+        const wrapW = el.w ?? width;
+        const lines = wrapText(ctx, el.content, px(wrapW));
+        const totalH = lines.length * px(lineH);
+        lines.forEach((line, i) => {
+          ctx.fillText(line, 0, -totalH / 2 + px(lineH) * i + px(lineH) / 2);
+        });
       } else if (el.type === "barcode") {
         const tc = document.createElement("canvas");
         try {
@@ -245,7 +242,11 @@ export default function LabelPreview({
         ctx.lineTo(px(w / 2), 0);
         ctx.stroke();
       } else if (el.type === "rect") {
-        ctx.strokeRect(px(-w / 2), px(-h / 2), px(w), px(h));
+        if (el.fill) {
+          ctx.fillRect(px(-w / 2), px(-h / 2), px(w), px(h));
+        } else {
+          ctx.strokeRect(px(-w / 2), px(-h / 2), px(w), px(h));
+        }
       }
 
       if (el.id === selectedId) {

@@ -3,15 +3,14 @@
 @theme {
   --color-background: #020617;
   --color-surface: rgba(15, 23, 42, 0.4);
-  --color-accent: #0096DA;
-  --color-accent-hover: #00AFFF;
-  --color-accent-secondary: #0077B6;
+  --color-accent: #0096da;
+  --color-accent-hover: #00afff;
+  --color-accent-secondary: #0077b6;
   --color-glass: rgba(255, 255, 255, 0.01);
   --color-glass-border: rgba(255, 255, 255, 0.08);
 }
 
 @layer base {
-
   *,
   *::before,
   *::after {
@@ -20,11 +19,10 @@
     box-sizing: border-box;
     border: none;
     outline: none;
-
   }
 
   :root {
-    font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+    font-family: "Outfit", "Inter", system-ui, sans-serif;
     color: #f8fafc;
     background-color: transparent;
     overflow: hidden;
@@ -69,8 +67,6 @@
     backdrop-filter: blur(10px);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-
-
 
   .input-field {
     background: rgba(15, 23, 42, 0.5);
