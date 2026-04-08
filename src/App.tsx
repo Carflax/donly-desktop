@@ -234,6 +234,7 @@ export default function App() {
   const [produtoEncontrado, setProdutoEncontrado] = useState<any>(null);
   const [printQueue, setPrintQueue] = useState<any[]>([]);
   const [remoteQueue, setRemoteQueue] = useState<any[]>([]);
+  const [localIp, setLocalIp] = useState("");
 
   const [data, setData] = useState<LabelData>({
     activeTab: "daniel",
@@ -267,12 +268,27 @@ export default function App() {
       customData[t.id] = t.elements;
     });
     setData((prev) => ({ ...prev, custom: customData }));
+    
+    // Sincroniza com o servidor Rust para o Coletor
+    invoke("update_templates", { json: JSON.stringify(templatesList) })
+      .catch(() => {});
   }, [templatesList]);
 
   useEffect(() => {
     invoke<string[]>("get_printers")
       .then(setPrinters)
       .catch(() => {});
+    
+    // Busca o IP local para o QR Code de pareamento
+    invoke<string>("get_local_ip")
+      .then((ip) => {
+        console.log("IP Encontrado para QR Code:", ip);
+        setLocalIp(ip);
+      })
+      .catch((err) => {
+        console.error("Erro ao buscar IP:", err);
+        setLocalIp("127.0.0.1");
+      });
   }, []);
 
   useEffect(() => {
@@ -861,119 +877,119 @@ export default function App() {
           <AnimatePresence mode="wait">
             {activeNav === "dashboard" && (
               <motion.div
+                key="dashboard"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 className="h-full flex flex-col p-10 gap-8"
               >
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
-                         <div className="lg:col-span-4 flex flex-col gap-6">
-                            {printQueue.length === 0 ? (
-                              <>
-                                <div className="flex items-center justify-between ml-1">
-                                  <label className="text-[10px] font-black text-white/40 uppercase tracking-[.25em]">
-                                    Modelos Disponíveis
-                                  </label>
-                                  <button
-                                    onClick={startNewTemplate}
-                                    className="p-1 px-3 rounded-lg bg-accent/10 border border-accent/20 text-accent text-[9px] font-black uppercase tracking-widest hover:bg-accent/20 transition-all"
+                  <div className="lg:col-span-4 flex flex-col gap-6">
+                    {printQueue.length === 0 ? (
+                      <>
+                        <div className="flex items-center justify-between ml-1">
+                          <label className="text-[10px] font-black text-white/40 uppercase tracking-[.25em]">
+                            Modelos Disponíveis
+                          </label>
+                          <button
+                            onClick={startNewTemplate}
+                            className="p-1 px-3 rounded-lg bg-accent/10 border border-accent/20 text-accent text-[9px] font-black uppercase tracking-widest hover:bg-accent/20 transition-all"
+                          >
+                            + Novo
+                          </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                          {templatesList.map((t) => (
+                            <div key={t.id} className="relative group">
+                              <button
+                                onClick={() => setSelectedTemplate(t.id)}
+                                className={`w-full text-left p-5 rounded-2xl border transition-all relative ${
+                                  selectedTemplate === t.id
+                                    ? "bg-accent/10 border-accent/40 shadow-xl shadow-accent/5 ring-1 ring-accent/20"
+                                    : "bg-white/[0.03] border-white/5 hover:border-white/20"
+                                }`}
+                              >
+                                <div className="flex justify-between items-start mb-2">
+                                  <div
+                                    className={`p-2 rounded-xl ${selectedTemplate === t.id ? "bg-accent/20 text-accent" : "bg-white/5 text-white/20"} transition-colors`}
                                   >
-                                    + Novo
-                                  </button>
-                                </div>
-                                <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                                  {templatesList.map((t) => (
-                                    <div key={t.id} className="relative group">
-                                      <button
-                                        onClick={() => setSelectedTemplate(t.id)}
-                                        className={`w-full text-left p-5 rounded-2xl border transition-all relative ${
-                                          selectedTemplate === t.id
-                                            ? "bg-accent/10 border-accent/40 shadow-xl shadow-accent/5 ring-1 ring-accent/20"
-                                            : "bg-white/[0.03] border-white/5 hover:border-white/20"
-                                        }`}
-                                      >
-                                        <div className="flex justify-between items-start mb-2">
-                                          <div
-                                            className={`p-2 rounded-xl ${selectedTemplate === t.id ? "bg-accent/20 text-accent" : "bg-white/5 text-white/20"} transition-colors`}
-                                          >
-                                            {t.columns === 2 ? (
-                                              <Columns size={20} />
-                                            ) : (
-                                              <SquareIcon size={20} />
-                                            )}
-                                          </div>
-                                          <span
-                                            className={`text-[10px] font-black px-2 py-1 rounded-lg ${selectedTemplate === t.id ? "bg-accent/20 text-accent" : "bg-white/5 text-white/40"}`}
-                                          >
-                                            {t.size}
-                                          </span>
-                                        </div>
-                                        <h3
-                                          className={`font-bold transition-colors ${selectedTemplate === t.id ? "text-white" : "text-white/60"}`}
-                                        >
-                                          {t.label}
-                                        </h3>
-                                        <p className="text-[10px] text-white/30 font-medium uppercase tracking-widest mt-1">
-                                          {t.columns} Coluna
-                                          {t.columns > 1 ? "s" : ""}
-                                        </p>
-                                      </button>
-
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          loadTemplateToEditor(t.id);
-                                        }}
-                                        className="absolute bottom-5 right-5 p-2 rounded-xl bg-white/5 hover:bg-accent hover:text-black text-white/20 hover:scale-110 transition-all opacity-0 group-hover:opacity-100 z-10"
-                                        title="Editar Modelo"
-                                      >
-                                        <Pencil size={14} />
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <div className="flex items-center justify-between ml-1">
-                                  <label className="text-[10px] font-black text-accent uppercase tracking-[.25em]">
-                                    Fila de Impressão ({printQueue.length})
-                                  </label>
-                                  <button
-                                    onClick={() => setPrintQueue([])}
-                                    className="p-1 px-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-[9px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all"
+                                    {t.columns === 2 ? (
+                                      <Columns size={20} />
+                                    ) : (
+                                      <SquareIcon size={20} />
+                                    )}
+                                  </div>
+                                  <span
+                                    className={`text-[10px] font-black px-2 py-1 rounded-lg ${selectedTemplate === t.id ? "bg-accent/20 text-accent" : "bg-white/5 text-white/40"}`}
                                   >
-                                    Limpar
-                                  </button>
+                                    {t.size}
+                                  </span>
                                 </div>
-                                <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                                  {printQueue.map((item) => (
-                                    <div
-                                      key={item.queueId}
-                                      className="w-full flex items-center justify-between p-4 rounded-2xl bg-accent/5 border border-accent/20 group hover:bg-accent/10 transition-all"
-                                    >
-                                      <div className="flex-1 min-w-0">
-                                        <h4 className="text-white font-bold text-xs truncate">
-                                          {item.ITE_DESITE}
-                                        </h4>
-                                        <p className="text-[9px] text-accent/60 font-black uppercase tracking-widest mt-0.5">
-                                          CÓD: {item.ITE_CODITE}
-                                        </p>
-                                      </div>
-                                      <button
-                                        onClick={() => removeFromQueue(item.queueId)}
-                                        className="p-2 text-white/20 hover:text-red-500 transition-colors"
-                                      >
-                                        <X size={16} />
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                              </>
-                            )}
-                          </div>
+                                <h3
+                                  className={`font-bold transition-colors ${selectedTemplate === t.id ? "text-white" : "text-white/60"}`}
+                                >
+                                  {t.label}
+                                </h3>
+                                <p className="text-[10px] text-white/30 font-medium uppercase tracking-widest mt-1">
+                                  {t.columns} Coluna
+                                  {t.columns > 1 ? "s" : ""}
+                                </p>
+                              </button>
 
-                  {/* Right: Live Preview & Print */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  loadTemplateToEditor(t.id);
+                                }}
+                                className="absolute bottom-5 right-5 p-2 rounded-xl bg-white/5 hover:bg-accent hover:text-black text-white/20 hover:scale-110 transition-all opacity-0 group-hover:opacity-100 z-10"
+                                title="Editar Modelo"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between ml-1">
+                          <label className="text-[10px] font-black text-accent uppercase tracking-[.25em]">
+                            Fila de Impressão ({printQueue.length})
+                          </label>
+                          <button
+                            onClick={() => setPrintQueue([])}
+                            className="p-1 px-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-[9px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all"
+                          >
+                            Limpar
+                          </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                          {printQueue.map((item) => (
+                            <div
+                              key={item.queueId}
+                              className="w-full flex items-center justify-between p-4 rounded-2xl bg-accent/5 border border-accent/20 group hover:bg-accent/10 transition-all"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-white font-bold text-xs truncate">
+                                  {item.ITE_DESITE}
+                                </h4>
+                                <p className="text-[9px] text-accent/60 font-black uppercase tracking-widest mt-0.5">
+                                  CÓD: {item.ITE_CODITE}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => removeFromQueue(item.queueId)}
+                                className="p-2 text-white/20 hover:text-red-500 transition-colors"
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
                   <div className="lg:col-span-8 flex flex-col gap-8">
                     <div className="flex-1 glass-card rounded-[2.5rem] border-white/5 relative bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center p-12 group/preview">
                       <div className="flex-1 flex items-center justify-center">
@@ -995,7 +1011,6 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* Campo de Busca por Código */}
                       <div className="mt-8 w-full max-w-sm space-y-2">
                         <input
                           type="text"
@@ -1123,6 +1138,7 @@ export default function App() {
 
             {activeNav === "editor" && (
               <motion.div
+                key="editor"
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
@@ -1147,8 +1163,6 @@ export default function App() {
                           setEditorData((p: any) => ({ ...p, name: v }))
                         }
                       />
-
-                      {/* Column Selection Toggle */}
                       <div className="space-y-1.5 pt-2">
                         <label className="text-[9px] font-bold text-white/60 uppercase tracking-widest ml-1">
                           LAYOUT DE COLUNAS
@@ -1185,16 +1199,9 @@ export default function App() {
                     </div>
 
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-white/40 ml-1 tracking-widest uppercase">
-                          Ferramentas
-                        </label>
-                      </div>
-                      {textDrawMode && (
-                        <div className="px-3 py-2 rounded-xl bg-accent/10 border border-accent/30 text-accent text-[9px] font-black uppercase tracking-widest text-center animate-pulse">
-                          Arraste no canvas para criar a área · Esc cancela
-                        </div>
-                      )}
+                      <label className="text-xs font-bold text-white/40 ml-1 tracking-widest uppercase">
+                        Ferramentas
+                      </label>
                       <div className="grid grid-cols-5 gap-2">
                         {[
                           { id: "text", icon: Type },
@@ -1212,7 +1219,7 @@ export default function App() {
                                 addEditorElement(tool.id as any);
                               }
                             }}
-                            className={`aspect-square rounded-xl border flex flex-col items-center justify-center gap-1 transition-all group shadow-sm ${tool.id === "text" && textDrawMode ? "bg-accent text-black border-accent" : "bg-white/10 border-white/10 hover:bg-accent/20 hover:border-accent/40"}`}
+                            className={`aspect-square rounded-xl border flex flex-col items-center justify-center gap-1 transition-all group ${tool.id === "text" && textDrawMode ? "bg-accent text-black border-accent" : "bg-white/10 border-white/10 hover:bg-accent/20 hover:border-accent/40"}`}
                           >
                             <tool.icon
                               size={18}
@@ -1223,13 +1230,7 @@ export default function App() {
                               }
                             />
                             <span className="text-[8px] font-bold text-white/60 uppercase tracking-tight">
-                              {tool.id === "text"
-                                ? "Texto"
-                                : tool.id === "barcode"
-                                  ? "BC"
-                                  : tool.id === "image"
-                                    ? "Img"
-                                    : tool.id}
+                              {tool.id === "text" ? "Texto" : tool.id === "barcode" ? "BC" : tool.id === "image" ? "Img" : tool.id}
                             </span>
                           </button>
                         ))}
@@ -1242,287 +1243,147 @@ export default function App() {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 10 }}
-                          className="glass-card rounded-2xl p-5 space-y-4 border-accent/20 bg-accent/5 backdrop-blur-xl"
+                          className="glass-card rounded-2xl p-5 space-y-4 border-accent/20 bg-accent/5"
                         >
-                          {/* Propriedades do Elemento (omitido para brevidade, mas igual ao anterior) */}
                           {(() => {
-                            const el = editorData.elements.find(
-                              (e) => e.id === selectedId,
-                            )!;
+                            const el = editorData.elements.find((e) => e.id === selectedId)!;
                             return (
-                              <div className="space-y-4">
-                                <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                                  <span className="text-[10px] font-black text-white uppercase tracking-widest">
-                                    {el.type} Propriedades
-                                  </span>
-                                  <button
-                                    onClick={() => setSelectedId(null)}
-                                    className="p-1 hover:bg-white/10 rounded-full"
-                                  >
-                                    <X size={14} className="text-white/40" />
-                                  </button>
-                                </div>
-
-                                {el.type === "image" && (
-                                  <div className="space-y-3">
-                                    <label className="text-[9px] font-bold text-white/60 uppercase tracking-widest ml-1">
-                                      Símbolos de Estoque
-                                    </label>
-                                    <div className="grid grid-cols-4 gap-2">
-                                      {[
-                                        {
-                                          name: "Fragile",
-                                          icon: <Wine size={16} />,
-                                          data: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTggMmgyYThhIDQgNCAwIDAgNCA0di43NWE0IDQgMCAwIDEtNCA0SDhhNCA0IDAgMCAxLTQtNHYuNzVBNCA0IDAgMCAwIDggMnoiLz48cGF0aCBkPSJNMTIgMTJ2MTBNOCAyMmgyIi8+PC9zdmc+",
-                                        },
-                                        {
-                                          name: "Up",
-                                          icon: <MoveUp size={16} />,
-                                          data: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0ibTcgOSA1LTUgNSA1TTExIDEyaDJNMTEgMTVoMk0xMSA4aDJNMTEgMThoMiIvPjwvc3ZnPg==",
-                                        },
-                                        {
-                                          name: "Keep Dry",
-                                          icon: <Umbrella size={16} />,
-                                          data: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTEyIDIydjE1bTUuNS03YTIgMiAwIDEgMS00IDB2LTEuNSIvPjxwYXRoIGQ9Ik0yMCAxM2MtLjUgMC0xLS41LTEuNS0xYTMgMyAwIDAgMC02IDAgMyAzIDAgMCAwLTYgMGMtLjUgMC0xIC41LTEuNSAxYTEwIDEwIDAgMCAxIDIwIDB6Ii8+PC9zdmc+",
-                                        },
-                                        {
-                                          name: "Package",
-                                          icon: <Package size={16} />,
-                                          data: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTIyIDEyaC00bC0zIDloLTlsLTMtOUgybTcgNGg2Ii8+PHBhdGggZD0iTTIxIDdsLTkgMTAtOS0xMFY1YTIgMiAwIDAgMSAyLTJoMTRhMiAyIDAgMCAxIDIgMnoiLz48L3N2Zz4=",
-                                        },
-                                      ].map((icon) => (
-                                        <button
-                                          key={icon.name}
-                                          onClick={() => {
-                                            updateEditorElement(el.id, {
-                                              content: icon.data,
-                                              w: 20,
-                                              h: 20,
-                                            });
-                                            pushToHistory(editorData.elements);
-                                          }}
-                                          className="flex flex-col items-center justify-center p-2 rounded-xl bg-black/40 border border-white/5 hover:border-accent/40 transition-all text-white/40 hover:text-accent"
-                                        >
-                                          {icon.icon}
-                                        </button>
-                                      ))}
-                                    </div>
+                              <div className="space-y-6">
+                                  <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                                      Propriedades: <span className="text-accent">{el.type}</span>
+                                    </span>
+                                    <button onClick={() => setSelectedId(null)} className="p-1.5 hover:bg-white/10 rounded-xl transition-colors">
+                                      <X size={14} className="text-white/40" />
+                                    </button>
                                   </div>
-                                )}
 
-                                <div className="space-y-4">
-                                  <div className="space-y-1.5">
-                                    <label className="text-[9px] font-bold text-white/60 uppercase tracking-widest ml-1">
-                                      Conteúdo
-                                    </label>
-                                    <div className="flex gap-2">
-                                      <input
-                                        value={
-                                          el.content.startsWith("data:")
-                                            ? "Imagem/Símbolo"
-                                            : el.content
-                                        }
-                                        onChange={(e) =>
-                                          updateEditorElement(el.id, {
-                                            content: e.target.value,
-                                          })
-                                        }
-                                        className="flex-1 bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none"
-                                      />
-                                      {el.type === "image" && (
-                                        <button
-                                          onClick={() =>
-                                            document
-                                              .getElementById("img-up")
-                                              ?.click()
-                                          }
-                                          className="p-2 rounded-xl bg-accent/20 border border-accent/20 text-accent"
-                                        >
-                                          <Upload size={14} />
-                                          <input
-                                            id="img-up"
-                                            type="file"
-                                            className="hidden"
-                                            onChange={(e) =>
-                                              e.target.files?.[0] &&
-                                              handleImageUpload(
-                                                el.id,
-                                                e.target.files[0],
-                                              )
-                                            }
-                                          />
-                                        </button>
-                                      )}
-                                    </div>
-                                  </div>
-                                  {(el.type === "text" ||
-                                    el.type === "barcode") && (
-                                    <div className="space-y-1.5">
-                                      <label className="text-[9px] font-bold text-accent/80 uppercase tracking-widest ml-1">
-                                        Vincular Campo API
-                                      </label>
-                                      <select
-                                        value={el.fieldBinding || ""}
-                                        onChange={(e) =>
-                                          updateEditorElement(el.id, {
-                                            fieldBinding:
-                                              e.target.value || undefined,
-                                          })
-                                        }
-                                        className="w-full bg-black/40 border border-accent/20 text-[11px] text-white rounded-xl px-3 py-2 outline-none focus:border-accent/60 transition-all"
-                                      >
-                                        <option value="">
-                                          — Manual (sem vínculo) —
-                                        </option>
-                                        <option value="ITE_DESITE">
-                                          Descrição do Produto
-                                        </option>
-                                        <option value="ITE_CODITE">
-                                          Código do Item
-                                        </option>
-                                        <option value="ITE_CODBAR">
-                                          Código de Barras (EAN)
-                                        </option>
-                                        <option value="MARCA">Marca</option>
-                                        <option value="QTD_TEXT">
-                                          Quantidade / Embalagem
-                                        </option>
-                                      </select>
-                                    </div>
-                                  )}
-                                  {el.type === "text" && (
-                                    <>
-                                      <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-1.5">
-                                          <label className="text-[9px] font-bold text-white/60 uppercase tracking-widest ml-1">
-                                            Fonte
-                                          </label>
-                                          <input
-                                            type="number"
-                                            value={el.fontSize}
-                                            onChange={(e) =>
-                                              updateEditorElement(el.id, {
-                                                fontSize: Number(
-                                                  e.target.value,
-                                                ),
-                                              })
-                                            }
-                                            className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none"
-                                          />
-                                        </div>
-                                        <button
-                                          onClick={() =>
-                                            updateEditorElement(el.id, {
-                                              bold: !el.bold,
-                                            })
-                                          }
-                                          className={`mt-5 rounded-xl border text-[10px] font-black ${el.bold ? "bg-accent text-black border-accent" : "bg-black/40 text-white/40 border-white/10"}`}
-                                        >
-                                          BOLD
-                                        </button>
-                                      </div>
-                                      <div className="space-y-1.5">
-                                        <label className="text-[9px] font-bold text-white/60 uppercase tracking-widest ml-1">
-                                          Alinhamento
-                                        </label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                          {(
-                                            ["left", "center", "right"] as const
-                                          ).map((a) => (
+                                  <div className="space-y-6">
+                                    {el.type === "image" && (
+                                      <div className="space-y-3">
+                                        <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Símbolos Disponíveis</label>
+                                        <div className="grid grid-cols-4 gap-2">
+                                          {[
+                                            { name: "Fragile", icon: <Wine size={16} />, data: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTEyIDJ2MTBtMCAwIDUtNW0tNSA1LTUtNW01IDEwdjVtLTUgMGgxMCIvPjwvc3ZnPg==" },
+                                            { name: "Up", icon: <MoveUp size={16} />, data: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTEyIDV2MTRtLTcgLTdsNyAtN2w3IDciLz48L3N2Zz4=" },
+                                            { name: "Keep Dry", icon: <Umbrella size={16} />, data: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTEyIDIydjAgbTAgMG0wIDAgTTEyIDIyYTIgMiAwIDAgMSA0IDB2LTEuNSIvPjxwYXRoIGQ9Ik0yMCAxM2MtLjUgMC0xLS41LTEuNS0xYTMgMyAwIDAgMC02IDAgMyAzIDAgMCAwLTYgMGMtLjUgMC0xIC41LTEuNSAxYTEwIDEwIDAgMCAxIDIwIDB6Ii8+PC9zdmc+" },
+                                            { name: "Package", icon: <Package size={16} />, data: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTIyIDEyaC00bC0zIDloLTlsLTMtOUgybTcgNGg2Ii8+PHBhdGggZD0iTTIxIDdsLTkgMTAtOS0xMFY1YTIgMiAwIDAgMSAyLTJoMTRhMiAyIDAgMCAxIDIgMnoiLz48L3N2Zz4=" }
+                                          ].map((icon) => (
                                             <button
-                                              key={a}
-                                              onClick={() =>
-                                                updateEditorElement(el.id, {
-                                                  align: a,
-                                                })
-                                              }
-                                              className={`p-2 rounded-xl border transition-all flex items-center justify-center ${el.align === a || (!el.align && a === "center") ? "bg-accent/20 border-accent/40 text-accent" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
+                                              key={icon.name}
+                                              onClick={() => {
+                                                updateEditorElement(el.id, { content: icon.data, w: 20, h: 20 });
+                                                pushToHistory(editorData.elements);
+                                              }}
+                                              className="flex flex-col items-center justify-center p-2 rounded-xl bg-black/40 border border-white/5 hover:border-accent/40 transition-all text-white/40 hover:text-accent shadow-inner"
                                             >
-                                              {a === "left" ? (
-                                                <AlignLeft size={14} />
-                                              ) : a === "center" ? (
-                                                <AlignCenter size={14} />
-                                              ) : (
-                                                <AlignRight size={14} />
-                                              )}
+                                              {icon.icon}
                                             </button>
                                           ))}
                                         </div>
                                       </div>
-                                    </>
-                                  )}
-                                  {el.type === "text" ? (
-                                    <div className="space-y-1.5">
-                                      <label className="text-[9px] font-bold text-white/60 uppercase tracking-widest ml-1">
-                                        Família da Fonte
-                                      </label>
-                                      <select
-                                        value={el.fontFamily || "Inter"}
-                                        onChange={(e) =>
-                                          updateEditorElement(el.id, {
-                                            fontFamily: e.target.value,
-                                          })
-                                        }
-                                        className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40"
-                                      >
-                                        <option value="Inter">
-                                          Inter (Padrão)
-                                        </option>
-                                        <option value="Segoe UI">
-                                          Segoe UI
-                                        </option>
-                                        <option value="Arial">Arial</option>
-                                        <option value="Verdana">Verdana</option>
-                                        <option value="Tahoma">Tahoma</option>
-                                        <option value="Times New Roman">
-                                          Times New Roman
-                                        </option>
-                                        <option value="Georgia">Georgia</option>
-                                        <option value="Courier New">
-                                          Courier New
-                                        </option>
-                                        <option value="Consolas">
-                                          Consolas
-                                        </option>
-                                        <option value="Impact">Impact</option>
-                                      </select>
-                                    </div>
-                                  ) : (
-                                    <div className="grid grid-cols-2 gap-3">
+                                    )}
+
+                                    <div className="space-y-4">
                                       <div className="space-y-1.5">
-                                        <label className="text-[9px] font-bold text-white/60 uppercase tracking-widest ml-1">
-                                          W
-                                        </label>
-                                        <input
-                                          type="number"
-                                          value={el.w}
-                                          onChange={(e) =>
-                                            updateEditorElement(el.id, {
-                                              w: Number(e.target.value),
-                                            })
-                                          }
-                                          className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none"
-                                        />
+                                        <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Conteúdo</label>
+                                        <div className="flex gap-2">
+                                          <input
+                                            value={el.content.startsWith("data:") ? "Imagem/Símbolo" : el.content}
+                                            onChange={(e) => updateEditorElement(el.id, { content: e.target.value })}
+                                            className="flex-1 bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2.5 outline-none focus:border-accent/40 transition-all"
+                                          />
+                                          {el.type === "image" && (
+                                            <button
+                                              onClick={() => document.getElementById("img-up")?.click()}
+                                              className="p-2.5 rounded-xl bg-accent/20 border border-accent/20 text-accent hover:bg-accent/30 transition-all"
+                                            >
+                                              <Upload size={14} />
+                                              <input id="img-up" type="file" className="hidden" onChange={(e) => e.target.files?.[0] && handleImageUpload(el.id, e.target.files[0])} />
+                                            </button>
+                                          )}
+                                        </div>
                                       </div>
-                                      <div className="space-y-1.5">
-                                        <label className="text-[9px] font-bold text-white/60 uppercase tracking-widest ml-1">
-                                          H
-                                        </label>
-                                        <input
-                                          type="number"
-                                          value={el.h}
-                                          onChange={(e) =>
-                                            updateEditorElement(el.id, {
-                                              h: Number(e.target.value),
-                                            })
-                                          }
-                                          className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none"
-                                        />
-                                      </div>
+
+                                      {(el.type === "text" || el.type === "barcode") && (
+                                        <div className="space-y-1.5">
+                                          <label className="text-[9px] font-bold text-accent/80 uppercase tracking-widest ml-1">Vincular Campo API</label>
+                                          <select
+                                            value={el.fieldBinding || ""}
+                                            onChange={(e) => updateEditorElement(el.id, { fieldBinding: e.target.value || undefined })}
+                                            className="w-full bg-black/40 border border-accent/20 text-[11px] text-white rounded-xl px-3 py-2.5 outline-none focus:border-accent/60 transition-all"
+                                          >
+                                            <option value="">— Manual (sem vínculo) —</option>
+                                            <option value="ITE_DESITE">Descrição do Produto</option>
+                                            <option value="ITE_CODITE">Código do Item</option>
+                                            <option value="ITE_CODBAR">Código de Barras (EAN)</option>
+                                            <option value="MARCA">Marca</option>
+                                            <option value="QTD_TEXT">Quantidade / Embalagem</option>
+                                          </select>
+                                        </div>
+                                      )}
+
+                                      {el.type === "text" && (
+                                        <>
+                                          <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1.5">
+                                              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Fonte</label>
+                                              <input type="number" value={el.fontSize} onChange={(e) => updateEditorElement(el.id, { fontSize: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
+                                            </div>
+                                            <button
+                                              onClick={() => updateEditorElement(el.id, { bold: !el.bold })}
+                                              className={`mt-5 rounded-xl border text-[10px] font-black transition-all ${el.bold ? "bg-accent text-black border-accent" : "bg-black/40 text-white/40 border-white/10"}`}
+                                            >
+                                              BOLD
+                                            </button>
+                                          </div>
+                                          <div className="space-y-1.5">
+                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Alinhamento</label>
+                                            <div className="grid grid-cols-3 gap-2">
+                                              {(["left", "center", "right"] as const).map((a) => (
+                                                <button
+                                                  key={a}
+                                                  onClick={() => updateEditorElement(el.id, { align: a })}
+                                                  className={`p-2 rounded-xl border transition-all flex items-center justify-center ${el.align === a || (!el.align && a === "center") ? "bg-accent/20 border-accent/40 text-accent" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
+                                                >
+                                                  {a === "left" ? <AlignLeft size={14} /> : a === "center" ? <AlignCenter size={14} /> : <AlignRight size={14} />}
+                                                </button>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        </>
+                                      )}
+
+                                      {el.type === "text" ? (
+                                        <div className="space-y-1.5">
+                                          <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Família da Fonte</label>
+                                          <select value={el.fontFamily || "Inter"} onChange={(e) => updateEditorElement(el.id, { fontFamily: e.target.value })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none">
+                                            <option value="Inter">Inter (Padrão)</option>
+                                            <option value="Segoe UI">Segoe UI</option>
+                                            <option value="Arial">Arial</option>
+                                            <option value="Verdana">Verdana</option>
+                                            <option value="Tahoma">Tahoma</option>
+                                            <option value="Times New Roman">Times New Roman</option>
+                                            <option value="Georgia">Georgia</option>
+                                            <option value="Courier New">Courier New</option>
+                                            <option value="Impact">Impact</option>
+                                          </select>
+                                        </div>
+                                      ) : (
+                                        <div className="grid grid-cols-2 gap-3">
+                                          <div className="space-y-1.5">
+                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">W</label>
+                                            <input type="number" value={el.w} onChange={(e) => updateEditorElement(el.id, { w: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
+                                          </div>
+                                          <div className="space-y-1.5">
+                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">H</label>
+                                            <input type="number" value={el.h} onChange={(e) => updateEditorElement(el.id, { h: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
+                                  </div>
                                 </div>
-                              </div>
                             );
                           })()}
                         </motion.div>
@@ -1592,182 +1453,129 @@ export default function App() {
 
             {activeNav === "settings" && (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
                 className="h-full p-10 space-y-8 overflow-y-auto custom-scrollbar"
               >
-                <div className="w-full space-y-8">
-                  <div>
-                    <h2 className="text-2xl font-bold text-white tracking-tight">
-                      Configurações Globais
+                <div className="max-w-4xl mx-auto space-y-10">
+                  <div className="flex flex-col gap-2">
+                    <h2 className="text-3xl font-black text-white tracking-tight uppercase">
+                      Configurações <span className="text-accent underline decoration-accent/20 decoration-4 underline-offset-8">Gerais</span>
                     </h2>
-                    <p className="text-white/40 text-sm mt-1 font-medium">
-                      Defina os padrões das suas etiquetas
+                    <p className="text-white/30 text-xs font-bold uppercase tracking-[0.2em]">
+                      Sincronização e Padrões do Sistema
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-8">
-                    <div className="glass-card rounded-3xl p-8 space-y-6 border-white/5 bg-white/[0.01]">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 rounded-xl bg-accent/20 text-accent">
-                          <SquareIcon size={20} />
-                        </div>
-                        <h3 className="font-bold text-white">
-                          Padrão 1 Coluna
-                        </h3>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <Field
-                          label="Largura (mm)"
-                          value={config.width1.toString()}
-                          onChange={(v) =>
-                            setConfig((p: any) => ({ ...p, width1: Number(v) }))
-                          }
-                        />
-                        <Field
-                          label="Altura (mm)"
-                          value={config.height1.toString()}
-                          onChange={(v) =>
-                            setConfig((p: any) => ({
-                              ...p,
-                              height1: Number(v),
-                            }))
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    <div className="glass-card rounded-3xl p-8 space-y-6 border-white/5 bg-white/[0.01]">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 rounded-xl bg-accent/20 text-accent">
-                          <Columns size={20} />
-                        </div>
-                        <h3 className="font-bold text-white">
-                          Padrão 2 Colunas
-                        </h3>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <Field
-                          label="Largura (mm)"
-                          value={config.width2.toString()}
-                          onChange={(v) =>
-                            setConfig((p: any) => ({ ...p, width2: Number(v) }))
-                          }
-                        />
-                        <Field
-                          label="Altura (mm)"
-                          value={config.height2.toString()}
-                          onChange={(v) =>
-                            setConfig((p: any) => ({
-                              ...p,
-                              height2: Number(v),
-                            }))
-                          }
-                        />
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* QR Code de Pareamento */}
+                    <div className="space-y-6">
+                      <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">
+                        Conector Mobile
+                      </label>
+                      <div className="glass-card rounded-[2.5rem] p-10 flex flex-col items-center text-center border-white/5 bg-white/[0.01] relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-gradient-to-b from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        
+                        {localIp ? (
+                          <>
+                            <div className="bg-white p-4 rounded-3xl shadow-2xl shadow-accent/20 transition-all duration-500 scale-100 group-hover:scale-105 mb-8 border-4 border-accent/20">
+                              <img 
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`http://${localIp}:3003`)}`} 
+                                alt="QR Code"
+                                className="w-40 h-40"
+                                crossOrigin="anonymous"
+                              />
+                            </div>
+                            <div className="space-y-3 z-10">
+                              <p className="text-lg font-black text-white px-2 uppercase">Parear Coletor</p>
+                              <p className="text-[10px] text-white/40 font-bold uppercase leading-relaxed px-6 tracking-wide">
+                                Escaneie com a câmera do coletor para conectar à este terminal automaticamente
+                              </p>
+                            </div>
+                            <div className="mt-8 flex items-center gap-2 bg-white/5 px-4 py-2 rounded-xl border border-white/10 group-hover:border-accent/40 transition-colors">
+                              <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                              <span className="text-[11px] font-mono font-bold text-accent tracking-widest">{localIp}:3003</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="py-20 flex flex-col items-center gap-4">
+                            <div className="w-12 h-12 rounded-full border-4 border-accent/20 border-t-accent animate-spin" />
+                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Buscando IP...</p>
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    <div className="glass-card rounded-3xl p-8 space-y-6 border-white/5 bg-white/[0.01]">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 rounded-xl bg-accent/20 text-accent">
-                          <Settings size={20} />
+                    {/* Ajustes de Calibração */}
+                    <div className="space-y-6">
+                      <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1">
+                        Calibração do Hardware
+                      </label>
+                      <div className="glass-card rounded-3xl p-8 border-white/5 bg-white/[0.01] space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                          <Field
+                            label="X-Offset (mm)"
+                            value={(config.offsetX || 0).toString()}
+                            onChange={(v) => setConfig((p: any) => ({ ...p, offsetX: Number(v) }))}
+                          />
+                          <Field
+                            label="Y-Offset (mm)"
+                            value={(config.offsetY || 0).toString()}
+                            onChange={(v) => setConfig((p: any) => ({ ...p, offsetY: Number(v) }))}
+                          />
                         </div>
-                        <h3 className="font-bold text-white">
-                          Calibração de Impressão
-                        </h3>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <Field
-                          label="X-Offset (mm)"
-                          value={(config.offsetX || 0).toString()}
-                          onChange={(v) =>
-                            setConfig((p: any) => ({
-                              ...p,
-                              offsetX: Number(v),
-                            }))
-                          }
-                        />
-                        <Field
-                          label="Y-Offset (mm)"
-                          value={(config.offsetY || 0).toString()}
-                          onChange={(v) =>
-                            setConfig((p: any) => ({
-                              ...p,
-                              offsetY: Number(v),
-                            }))
-                          }
-                        />
+                        
+                        <div className="pt-6 border-t border-white/5 space-y-4">
+                           <div className="flex items-center gap-3">
+                              <SquareIcon size={16} className="text-white/20" />
+                              <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Padrão 1 Coluna</span>
+                           </div>
+                           <div className="grid grid-cols-2 gap-4">
+                              <Field label="L (mm)" value={config.width1.toString()} onChange={(v) => setConfig((p:any) => ({...p, width1: Number(v)}))} />
+                              <Field label="A (mm)" value={config.height1.toString()} onChange={(v) => setConfig((p:any) => ({...p, height1: Number(v)}))} />
+                           </div>
+                        </div>
+
+                        <div className="pt-4 space-y-4">
+                           <div className="flex items-center gap-3">
+                              <Columns size={16} className="text-white/20" />
+                              <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Padrão 2 Colunas</span>
+                           </div>
+                           <div className="grid grid-cols-2 gap-4">
+                              <Field label="L (mm)" value={config.width2.toString()} onChange={(v) => setConfig((p:any) => ({...p, width2: Number(v)}))} />
+                              <Field label="A (mm)" value={config.height2.toString()} onChange={(v) => setConfig((p:any) => ({...p, height2: Number(v)}))} />
+                           </div>
+                        </div>
                       </div>
                     </div>
                   </div>
 
+                  {/* Tema e Estética */}
                   <div className="glass-card rounded-3xl p-8 border-white/5 bg-white/[0.01] flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="p-3 rounded-2xl bg-white/5 text-white/40">
                         <LayoutDashboard size={24} />
                       </div>
                       <div>
-                        <h3 className="font-bold text-white">
-                          Estética da Interface
-                        </h3>
-                        <p className="text-xs text-white/40 font-medium">
-                          Escolha entre fundo sólido (Escuro) ou efeito vidro
-                          (Vidro)
-                        </p>
+                        <h3 className="font-bold text-white">Interface Visual</h3>
+                        <p className="text-xs text-white/40 font-medium">Escolha o estilo de fundo do DonlyX</p>
                       </div>
                     </div>
                     <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
                       <button
-                        onClick={() =>
-                          setConfig((p: any) => ({ ...p, theme: "dark" }))
-                        }
-                        className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${config.theme === "dark" ? "bg-accent text-black" : "text-white/40 hover:text-white"}`}
+                        onClick={() => setConfig((p: any) => ({ ...p, theme: "dark" }))}
+                        className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${config.theme === "dark" ? "bg-accent text-black shadow-lg" : "text-white/40 hover:text-white"}`}
                       >
                         Sólido
                       </button>
                       <button
-                        onClick={() =>
-                          setConfig((p: any) => ({ ...p, theme: "glass" }))
-                        }
-                        className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${config.theme === "glass" ? "bg-accent text-black" : "text-white/40 hover:text-white"}`}
+                        onClick={() => setConfig((p: any) => ({ ...p, theme: "glass" }))}
+                        className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${config.theme === "glass" ? "bg-accent text-black shadow-lg" : "text-white/40 hover:text-white"}`}
                       >
                         Vidro
                       </button>
                     </div>
-                  </div>
-
-                  <div className="glass-card rounded-3xl p-8 border-white/5 bg-white/[0.01] flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 rounded-2xl bg-white/5 text-white/40">
-                        <Settings size={24} />
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-white">
-                          Resetar para Padrões
-                        </h3>
-                        <p className="text-xs text-white/40 font-medium">
-                          Restaurar dimensões 100mm e 50mm / 50mm e 30mm
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() =>
-                        setConfig((p: any) => ({
-                          ...p,
-                          width1: 100,
-                          height1: 50,
-                          width2: 50,
-                          height2: 30,
-                          gap: 3,
-                          offsetX: 8,
-                          offsetY: 0,
-                        }))
-                      }
-                      className="px-6 py-3 rounded-2xl border border-accent/20 bg-accent/5 text-accent hover:bg-accent/10 text-xs font-bold transition-all uppercase tracking-widest"
-                    >
-                      Restaurar
-                    </button>
                   </div>
                 </div>
               </motion.div>

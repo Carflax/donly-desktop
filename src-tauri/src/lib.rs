@@ -126,11 +126,27 @@ fn update_templates(json: String) {
     }
 }
 
+#[tauri::command]
+fn get_local_ip() -> String {
+    use std::net::UdpSocket;
+    let socket = match UdpSocket::bind("0.0.0.0:0") {
+        Ok(s) => s,
+        Err(_) => return "127.0.0.1".to_string(),
+    };
+
+    if socket.connect("8.8.8.8:80").is_ok() {
+        if let Ok(addr) = socket.local_addr() {
+            return addr.ip().to_string();
+        }
+    }
+    "127.0.0.1".to_string()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![get_printers, print_raw, print_label, update_templates])
+        .invoke_handler(tauri::generate_handler![get_printers, print_raw, print_label, update_templates, get_local_ip])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
 
