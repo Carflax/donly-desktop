@@ -3,7 +3,12 @@
     "allow": [
       "mcp__Claude_Preview__preview_start",
       "Bash(npm run:*)",
-      "Bash(find /c/Users/Danilo/Desktop/donly-desktop/src -name *Property* -o -name *Editor*)"
+      "Bash(find /c/Users/Danilo/Desktop/donly-desktop/src -name *Property* -o -name *Editor*)",
+      "Bash(more)",
+      "Bash(Get-ChildItem -Recurse -File \"C:\\\\Users\\\\Danilo\\\\Desktop\\\\donly-desktop\\\\src\")",
+      "Bash(Select-Object FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Danilo\\\\Desktop\\\\donly-desktop\\\\src\" -Recurse -File)",
+      "Bash(Select-Object -ExpandProperty FullName)"
     ]
   }
 }

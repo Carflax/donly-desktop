@@ -23,6 +23,8 @@ export type LabelElement = {
   bcFontSize?: number;
   bcLabelDist?: number;
   lineHeight?: number;
+  strokeDasharray?: number[];
+  lineDash?: number[];
 };
 
 export type LabelData = {
@@ -100,6 +102,18 @@ export default function LabelPreview({
   const [imagesCache, setImagesCache] = useState<
     Record<string, HTMLImageElement>
   >({});
+
+  // Selection box state
+  const [selectionBox, setSelectionBox] = useState<{
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    active: boolean;
+  } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const selectionStart = useRef<{ x: number; y: number } | null>(null);
+  const selecting = useRef<boolean>(false);
 
   const px = (mm: number) => (mm * dpi) / 25.4;
 
@@ -247,7 +261,17 @@ export default function LabelPreview({
         ctx.beginPath();
         ctx.moveTo(px(-w / 2), 0);
         ctx.lineTo(px(w / 2), 0);
+
+        // Apply line style (dash pattern)
+        const dashArray = el.strokeDasharray || el.lineDash;
+        if (dashArray && Array.isArray(dashArray) && dashArray.length >= 2) {
+          ctx.setLineDash(dashArray);
+        } else {
+          ctx.setLineDash([]);
+        }
+
         ctx.stroke();
+        ctx.setLineDash([]); // Reset
       } else if (el.type === "rect") {
         if (el.fill) {
           ctx.fillRect(px(-w / 2), px(-h / 2), px(w), px(h));
@@ -374,7 +398,17 @@ export default function LabelPreview({
           ctx.beginPath();
           ctx.moveTo(px(-w / 2), 0);
           ctx.lineTo(px(w / 2), 0);
+
+          // Apply line style (dash pattern)
+          const dashArray = el.strokeDasharray || el.lineDash;
+          if (dashArray && Array.isArray(dashArray) && dashArray.length >= 2) {
+            ctx.setLineDash(dashArray);
+          } else {
+            ctx.setLineDash([]);
+          }
+
           ctx.stroke();
+          ctx.setLineDash([]); // Reset
         } else if (el.type === "rect") {
           if (el.fill) {
             ctx.fillRect(px(-w / 2), px(-h / 2), px(w), px(h));
@@ -403,6 +437,24 @@ export default function LabelPreview({
       ctx.stroke();
     }
 
+    // Draw selection box
+    if (selectionBox && selectionBox.active) {
+      ctx.fillStyle = "rgba(0,150,218,0.12)";
+      ctx.strokeStyle = "#0096DA";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 3]);
+
+      const rx = Math.min(selectionBox.x, selectionBox.x + selectionBox.w);
+      const ry = Math.min(selectionBox.y, selectionBox.y + selectionBox.h);
+      const rw = Math.abs(selectionBox.w);
+      const rh = Math.abs(selectionBox.h);
+
+      ctx.fillRect(px(rx), px(ry), px(rw), px(rh));
+      ctx.strokeRect(px(rx), px(ry), px(rw), px(rh));
+
+      ctx.setLineDash([]);
+    }
+
     // Draw text area preview while dragging
     if (drawingRect) {
       const rx = Math.min(drawingRect.x1, drawingRect.x2);
@@ -417,7 +469,7 @@ export default function LabelPreview({
       ctx.strokeRect(px(rx), px(ry), px(rw), px(rh));
       ctx.setLineDash([]);
     }
-  }, [data, width, height, dpi, guides, editingId, selectedId, imagesCache, drawingRect, columns, gap]);
+  }, [data, width, height, dpi, guides, editingId, selectedId, imagesCache, drawingRect, columns, gap, selectionBox]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button === 2) return;
@@ -428,14 +480,78 @@ export default function LabelPreview({
       ((e.clientX - rect.left) * (canvas.width / rect.width) * 25.4) / dpi;
     const mmY =
       ((e.clientY - rect.top) * (canvas.height / rect.height) * 25.4) / dpi;
+
     if (drawingMode) {
       drawStart.current = { x: mmX, y: mmY };
       setDrawingRect({ x1: mmX, y1: mmY, x2: mmX, y2: mmY });
       return;
     }
+
+    // Click-and-drag selection (no shift key)
+    if (!e.shiftKey && !rotatingId.current && !resizingId.current && !draggingId.current) {
+      selectionStart.current = { x: mmX, y: mmY };
+      setSelectionBox({ x: mmX, y: mmY, w: 0, h: 0, active: true });
+      selecting.current = true;
+
+      // Check if clicking on an element
+      const elements = data.custom[data.activeTab] || [];
+      for (let i = elements.length - 1; i >= 0; i--) {
+        const el = elements[i];
+        const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
+        const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
+        const isInsideX = el.type === "text"
+          ? mmX >= el.x - w / 2 && mmX <= el.x + w / 2
+          : mmX >= el.x && mmX <= el.x + w;
+        const isInsideY = el.type === "text"
+          ? mmY >= el.y - h / 2 && mmY <= el.y + h / 2
+          : mmY >= el.y && mmY <= el.y + h;
+
+        if (isInsideX && isInsideY) {
+          onSelectElement?.(el.id);
+          draggingId.current = el.id;
+          dragStart.current = { x: mmX, y: mmY, elX: el.x, elY: el.y };
+          setSelectionBox(null);
+          selecting.current = false;
+          return;
+        }
+      }
+      onSelectElement?.(null);
+      return;
+    }
+
+    // Shift-click for multi-selection
+    if (e.shiftKey) {
+      const elements = data.custom[data.activeTab] || [];
+      for (let i = elements.length - 1; i >= 0; i--) {
+        const el = elements[i];
+        const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
+        const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
+        const isInsideX = el.type === "text"
+          ? mmX >= el.x - w / 2 && mmX <= el.x + w / 2
+          : mmX >= el.x && mmX <= el.x + w;
+        const isInsideY = el.type === "text"
+          ? mmY >= el.y - h / 2 && mmY <= el.y + h / 2
+          : mmY >= el.y && mmY <= el.y + h;
+
+        if (isInsideX && isInsideY) {
+          const newSet = new Set(selectedIds);
+          if (newSet.has(el.id)) {
+            newSet.delete(el.id);
+          } else {
+            newSet.add(el.id);
+          }
+          setSelectedIds(newSet);
+          onSelectElement?.(newSet.size > 0 ? Array.from(newSet)[newSet.size - 1] : null);
+          return;
+        }
+      }
+      return;
+    }
+
+    // Check special element handles (rotate, resize, delete)
     if (selectedId) {
       const elements = data.custom[data.activeTab] || [];
-      const el = elements.find((item) => item.id === selectedId);
+      const el = elements.find(item => item.id === selectedId);
       if (el) {
         const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
         const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
@@ -447,34 +563,30 @@ export default function LabelPreview({
         const localX = dx * Math.cos(-rad) - dy * Math.sin(-rad);
         const localY = dx * Math.sin(-rad) + dy * Math.cos(-rad);
         const h_mm = (20 * 25.4) / dpi;
-        if (
-          Math.abs(localX - 0) < 5 &&
-          Math.abs(localY - (-h / 2 - h_mm)) < 5
-        ) {
+
+        if (Math.abs(localX - 0) < 5 && Math.abs(localY - (-h / 2 - h_mm)) < 5) {
           rotatingId.current = el.id;
           rotateStart.current = { cx, cy };
           return;
         }
+
         const delLX = w / 2 + (4 * 25.4) / dpi;
         const delLY = -h / 2 - (4 * 25.4) / dpi;
         if (Math.abs(localX - delLX) < 5 && Math.abs(localY - delLY) < 5) {
           onRemoveElement?.(el.id);
           return;
         }
+
         if (Math.abs(localX - w / 2) < 5 && Math.abs(localY - h / 2) < 5) {
           resizingId.current = el.id;
-          resizeStart.current = {
-            mmX,
-            mmY,
-            w,
-            h,
-            fontSize: el.fontSize || 4,
-          };
+          resizeStart.current = { mmX, mmY, w, h, fontSize: el.fontSize || 4 };
           return;
         }
       }
     }
-    const elements = (data.custom && data.custom[data.activeTab]) || [];
+
+    // Normal element selection (single click)
+    const elements = data.custom[data.activeTab] || [];
     let hit = false;
     for (let i = elements.length - 1; i >= 0; i--) {
       const el = elements[i];
@@ -486,15 +598,31 @@ export default function LabelPreview({
       const isInsideY = el.type === "text"
         ? mmY >= el.y - h / 2 && mmY <= el.y + h / 2
         : mmY >= el.y && mmY <= el.y + h;
+
       if (isInsideX && isInsideY) {
+        onSelectElement?.(el.id);
         draggingId.current = el.id;
         dragStart.current = { x: mmX, y: mmY, elX: el.x, elY: el.y };
-        onSelectElement?.(el.id);
         hit = true;
         break;
       }
     }
     if (!hit) onSelectElement?.(null);
+  };
+
+  const isInSelectionBox = (elX: number, elY: number, elW: number, elH: number, type: string) => {
+    if (!selectionBox || !selectionBox.active) return false;
+    const boxX = Math.min(selectionBox.x, selectionBox.x + selectionBox.w);
+    const boxY = Math.min(selectionBox.y, selectionBox.y + selectionBox.h);
+    const boxW = Math.abs(selectionBox.w);
+    const boxH = Math.abs(selectionBox.h);
+
+    // Check if element center is inside selection box
+    const elCenterX = type === "text" ? elX : elX + elW / 2;
+    const elCenterY = type === "text" ? elY : elY + elH / 2;
+
+    return elCenterX >= boxX && elCenterX <= boxX + boxW &&
+           elCenterY >= boxY && elCenterY <= boxY + boxH;
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -505,6 +633,20 @@ export default function LabelPreview({
       ((e.clientX - rect.left) * (canvas.width / rect.width) * 25.4) / dpi;
     const mmY =
       ((e.clientY - rect.top) * (canvas.height / rect.height) * 25.4) / dpi;
+
+    // Selection box update
+    if (selecting.current && selectionStart.current) {
+      const box = {
+        x: selectionStart.current.x,
+        y: selectionStart.current.y,
+        w: mmX - selectionStart.current.x,
+        h: mmY - selectionStart.current.y,
+        active: true,
+      };
+      setSelectionBox(box);
+      return;
+    }
+
     if (drawStart.current) {
       setDrawingRect({ x1: drawStart.current.x, y1: drawStart.current.y, x2: mmX, y2: mmY });
       return;
@@ -608,6 +750,42 @@ export default function LabelPreview({
   };
 
   const handleMouseUp = () => {
+    // Handle selection box
+    if (selecting.current && selectionStart.current) {
+      selecting.current = false;
+      const box = selectionBox;
+
+      // Apply selection if box is large enough
+      if (box && box.active) {
+        const elements = data.custom[data.activeTab] || [];
+        const newSet = new Set<string>();
+
+        elements.forEach((el) => {
+          const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
+          const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
+          if (isInSelectionBox(el.x, el.y, w, h, el.type)) {
+            newSet.add(el.id);
+          }
+        });
+
+        if (newSet.size > 0) {
+          // Add to existing selection if shift is held, otherwise replace
+          const wasMultiSelect = selectedIds.size > 1;
+          if (wasMultiSelect) {
+            setSelectedIds(newSet);
+            onSelectElement?.(Array.from(newSet)[newSet.size - 1]);
+          } else {
+            setSelectedIds(newSet);
+            onSelectElement?.(Array.from(newSet)[newSet.size - 1]);
+          }
+        }
+      }
+
+      setSelectionBox(null);
+      selectionStart.current = null;
+      return;
+    }
+
     if (drawStart.current && drawingRect) {
       const x1 = Math.min(drawingRect.x1, drawingRect.x2);
       const y1 = Math.min(drawingRect.y1, drawingRect.y2);

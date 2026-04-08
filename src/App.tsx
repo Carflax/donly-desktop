@@ -277,7 +277,19 @@ export default function App() {
 
   const [templatesList, setTemplatesList] = useState<Template[]>(() => {
     const saved = localStorage.getItem("donly_templates");
-    return saved ? JSON.parse(saved) : DEFAULT_TEMPLATES;
+    // Só carrega do localStorage se já existir algo salvo (usuário já usou o app)
+    // Se for primeira instalação, usa os templates padrão
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {
+        console.error("Erro ao parsear templates salvos:", e);
+      }
+    }
+    return DEFAULT_TEMPLATES;
   });
 
   const [editorData, setEditorData] = useState<{
@@ -959,7 +971,7 @@ export default function App() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col relative overflow-hidden bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-from),_transparent_40%)] from-accent/5">
+      <main className="flex-1 flex flex-col relative overflow-hidden">
         <header
           data-tauri-drag-region
           className="h-20 border-b border-white/5 flex items-center justify-between px-10 bg-black/20 backdrop-blur-md relative z-50 select-none cursor-grab active:cursor-grabbing"
@@ -1460,39 +1472,115 @@ export default function App() {
 
                                       {el.type === "text" && (
                                         <>
-                                          <div className="space-y-1.5">
-                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Altura da Linha (1.3)</label>
-                                            <input type="number" step="0.1" min="0.5" value={el.lineHeight ?? 1.3} onChange={(e) => updateEditorElement(el.id, { lineHeight: parseFloat(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
-                                          </div>
-                                          <div className="grid grid-cols-2 gap-2">
-                                            <button
-                                              onClick={() => updateEditorElement(el.id, { bold: !el.bold })}
-                                              className={`py-2 rounded-xl border text-[10px] font-black transition-all ${el.bold ? "bg-accent text-black border-accent" : "bg-black/40 text-white/40 border-white/10"}`}
-                                            >
-                                              BOLD
-                                            </button>
-                                            <button
-                                              onClick={() => updateEditorElement(el.id, { italic: !el.italic })}
-                                              className={`py-2 rounded-xl border text-[10px] font-black italic transition-all ${el.italic ? "bg-accent text-black border-accent" : "bg-black/40 text-white/40 border-white/10"}`}
-                                            >
-                                              ITALIC
-                                            </button>
-                                          </div>
-                                          <div className="space-y-1.5">
-                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Alinhamento</label>
-                                            <div className="grid grid-cols-3 gap-2">
-                                              {(["left", "center", "right"] as const).map((a) => (
-                                                <button
-                                                  key={a}
-                                                  onClick={() => updateEditorElement(el.id, { align: a })}
-                                                  className={`p-2 rounded-xl border transition-all flex items-center justify-center ${el.align === a || (!el.align && a === "center") ? "bg-accent/20 border-accent/40 text-accent" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
-                                                >
-                                                  {a === "left" ? <AlignLeft size={14} /> : a === "center" ? <AlignCenter size={14} /> : <AlignRight size={14} />}
-                                                </button>
-                                              ))}
+                                          {/* Dimensões e Medidas */}
+                                          <div className="glass-card rounded-xl p-5 border-white/10 bg-white/[0.03] space-y-4">
+                                            <div className="flex items-center gap-2 mb-1">
+                                              <Type size={14} className="text-accent" />
+                                              <span className="text-[10px] font-black text-white uppercase tracking-widest">Dimensões</span>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3">
+                                              <div className="space-y-1.5">
+                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Tamanho Fonte</label>
+                                                <input
+                                                  type="number"
+                                                  step="0.5"
+                                                  min="1"
+                                                  max="72"
+                                                  value={el.fontSize ?? 4}
+                                                  onChange={(e) => updateEditorElement(el.id, { fontSize: parseFloat(e.target.value) })}
+                                                  className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
+                                                />
+                                              </div>
+                                              <div className="space-y-1.5">
+                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Altura Linha</label>
+                                                <input
+                                                  type="number"
+                                                  step="0.1"
+                                                  min="0.5"
+                                                  max="3"
+                                                  value={el.lineHeight ?? 1.3}
+                                                  onChange={(e) => updateEditorElement(el.id, { lineHeight: parseFloat(e.target.value) })}
+                                                  className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
+                                                />
+                                              </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                              <div className="space-y-1.5">
+                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Largura (mm)</label>
+                                                <input
+                                                  type="number"
+                                                  step="1"
+                                                  min="10"
+                                                  value={el.w ?? 50}
+                                                  onChange={(e) => updateEditorElement(el.id, { w: Math.max(10, parseFloat(e.target.value) || 50) })}
+                                                  className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
+                                                />
+                                              </div>
+                                              <div className="space-y-1.5">
+                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Altura (mm)</label>
+                                                <input
+                                                  type="number"
+                                                  step="0.5"
+                                                  min="5"
+                                                  value={el.h ?? 10}
+                                                  onChange={(e) => updateEditorElement(el.id, { h: Math.max(5, parseFloat(e.target.value) || 10) })}
+                                                  className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
+                                                />
+                                              </div>
                                             </div>
                                           </div>
-                                          <div className="space-y-1.5 relative">
+
+                                          {/* Estilo do Texto */}
+                                          <div className="glass-card rounded-xl p-5 border-white/10 bg-white/[0.03] space-y-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                              <Type size={14} className="text-accent" />
+                                              <span className="text-[10px] font-black text-white uppercase tracking-widest">Estilo</span>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3">
+                                              <button
+                                                onClick={() => updateEditorElement(el.id, { bold: !el.bold })}
+                                                className={`py-3 px-4 rounded-xl border text-[10px] font-black transition-all ${el.bold ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 text-white/40 border-white/10 hover:bg-white/5 hover:text-white"}`}
+                                              >
+                                                <div className="flex flex-col items-center gap-1">
+                                                  <span className="text-lg leading-none">B</span>
+                                                  <span>Bold</span>
+                                                </div>
+                                              </button>
+                                              <button
+                                                onClick={() => updateEditorElement(el.id, { italic: !el.italic })}
+                                                className={`py-3 px-4 rounded-xl border text-[10px] font-black transition-all ${el.italic ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 text-white/40 border-white/10 hover:bg-white/5 hover:text-white"}`}
+                                              >
+                                                <div className="flex flex-col items-center gap-1">
+                                                  <span className="text-lg leading-none italic">I</span>
+                                                  <span>Italic</span>
+                                                </div>
+                                              </button>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Alinhamento</label>
+                                              <div className="grid grid-cols-3 gap-2">
+                                                {(["left", "center", "right"] as const).map((a) => (
+                                                  <button
+                                                    key={a}
+                                                    onClick={() => updateEditorElement(el.id, { align: a })}
+                                                    className={`p-2.5 rounded-xl border transition-all flex items-center justify-center ${el.align === a || (!el.align && a === "center") ? "bg-accent/20 border-accent/40 text-accent" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
+                                                  >
+                                                    {a === "left" ? <AlignLeft size={16} /> : a === "center" ? <AlignCenter size={16} /> : <AlignRight size={16} />}
+                                                  </button>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* Fonte */}
+                                          <div className="glass-card rounded-xl p-5 border-white/10 bg-white/[0.03] space-y-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                              <Type size={14} className="text-accent" />
+                                              <span className="text-[10px] font-black text-white uppercase tracking-widest">Fonte</span>
+                                            </div>
                                             <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Fonte</label>
                                             <button
                                               onClick={() => setShowFontMenu(!showFontMenu)}
@@ -1592,28 +1680,196 @@ export default function App() {
                                       )}
 
                                       {(el.type === "line" || el.type === "rect") && (
-                                        <div className="grid grid-cols-2 gap-2">
-                                          <div className="space-y-1.5">
-                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">W (mm)</label>
-                                            <input type="number" value={el.w} onChange={(e) => updateEditorElement(el.id, { w: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
+                                        <>
+                                          {/* Dimensões e Orientação da Shape */}
+                                          <div className="glass-card rounded-xl p-5 border-white/10 bg-white/[0.03] space-y-4">
+                                            <div className="flex items-center gap-2 mb-1">
+                                              <Minus size={14} className="text-accent" />
+                                              <span className="text-[10px] font-black text-white uppercase tracking-widest">Dimensões & Orientação</span>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-3">
+                                              <div className="space-y-1.5">
+                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Largura (mm)</label>
+                                                <input
+                                                  type="number"
+                                                  step="1"
+                                                  min="5"
+                                                  value={el.w ?? 20}
+                                                  onChange={(e) => updateEditorElement(el.id, { w: Math.max(5, parseFloat(e.target.value) || 20) })}
+                                                  className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
+                                                />
+                                              </div>
+                                              <div className="space-y-1.5">
+                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Altura (mm)</label>
+                                                <input
+                                                  type="number"
+                                                  step="1"
+                                                  min="5"
+                                                  value={el.h ?? 10}
+                                                  onChange={(e) => updateEditorElement(el.id, { h: Math.max(5, parseFloat(e.target.value) || 10) })}
+                                                  className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
+                                                />
+                                              </div>
+                                            </div>
+
+                                            {el.type === "line" && (
+                                              <>
+                                                <div className="space-y-1.5 pt-2">
+                                                  <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Orientação</label>
+                                                  <div className="grid grid-cols-3 gap-2">
+                                                    <button
+                                                      onClick={() => updateEditorElement(el.id, { rotation: 0, h: Math.max(el.w ?? 20, el.h ?? 10) })}
+                                                      className={`py-2 rounded-xl border text-[9px] font-black transition-all ${el.rotation === 180 || el.rotation === -180 ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
+                                                    >
+                                                      Horizontal
+                                                    </button>
+                                                    <button
+                                                      onClick={() => updateEditorElement(el.id, { rotation: 90, w: Math.max(el.w ?? 20, el.h ?? 10) })}
+                                                      className={`py-2 rounded-xl border text-[9px] font-black transition-all ${el.rotation === 90 || el.rotation === -90 ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
+                                                    >
+                                                      Vertical
+                                                    </button>
+                                                    <button
+                                                      onClick={() => updateEditorElement(el.id, { rotation: 45 })}
+                                                      className={`py-2 rounded-xl border text-[9px] font-black transition-all ${el.rotation === 45 || el.rotation === -135 ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
+                                                    >
+                                                      Diagonal
+                                                    </button>
+                                                  </div>
+                                                </div>
+
+                                                <div className="space-y-1.5">
+                                                  <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Estilo da Linha</label>
+                                                  <div className="grid grid-cols-3 gap-2">
+                                                    <button
+                                                      onClick={() => {
+                                                        updateEditorElement(el.id, {
+                                                          strokeDasharray: undefined,
+                                                          lineDash: undefined
+                                                        });
+                                                      }}
+                                                      className={`py-2 px-2 rounded-xl border text-[9px] font-black transition-all flex flex-col items-center gap-1 ${!el.strokeDasharray ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
+                                                    >
+                                                      <div className="h-4 border-b-2 border-current" />
+                                                      <span>Sólida</span>
+                                                    </button>
+                                                    <button
+                                                      onClick={() => updateEditorElement(el.id, { strokeDasharray: [4, 4] })}
+                                                      className={`py-2 px-2 rounded-xl border text-[9px] font-black transition-all flex flex-col items-center gap-1 ${JSON.stringify(el.strokeDasharray) === JSON.stringify([4, 4]) ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
+                                                    >
+                                                      <div className="h-4 flex items-center justify-between" style={{ gap: '6px' }}>
+                                                        <div className="h-2 w-3 border-b-2 border-current" />
+                                                        <div className="h-2 w-3 border-[1px] border-dashed border-current" />
+                                                      </div>
+                                                      <span>Pontuada</span>
+                                                    </button>
+                                                    <button
+                                                      onClick={() => updateEditorElement(el.id, { strokeDasharray: [10, 5] })}
+                                                      className={`py-2 px-2 rounded-xl border text-[9px] font-black transition-all flex flex-col items-center gap-1 ${JSON.stringify(el.strokeDasharray) === JSON.stringify([10, 5]) ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
+                                                    >
+                                                      <div className="h-4 flex items-center justify-between" style={{ gap: '4px' }}>
+                                                        <div className="h-2 w-6 border-b-2 border-current" />
+                                                        <div className="h-2 w-3 border-b-[3px] border-current" />
+                                                      </div>
+                                                      <span>Pontilhada</span>
+                                                    </button>
+                                                  </div>
+                                                </div>
+
+                                                <div className="space-y-1.5">
+                                                  <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Espessura da Linha</label>
+                                                  <div className="flex items-center gap-3">
+                                                    <input
+                                                      type="range"
+                                                      min="0.5"
+                                                      max="20"
+                                                      step="0.5"
+                                                      value={el.strokeWidth ?? 1}
+                                                      onChange={(e) => updateEditorElement(el.id, { strokeWidth: parseFloat(e.target.value) })}
+                                                      className="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-accent"
+                                                    />
+                                                    <span className="text-sm font-bold text-white w-12 text-right">{el.strokeWidth?.toFixed(1)}mm</span>
+                                                  </div>
+                                                </div>
+
+                                                {/* Presets de Comprimento */}
+                                                <div className="space-y-1.5 pt-2">
+                                                  <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Presets Rápidos</label>
+                                                  <div className="grid grid-cols-4 gap-2">
+                                                    <button
+                                                      onClick={() => updateEditorElement(el.id, { w: 50 })}
+                                                      className="py-2 px-2 rounded-xl border text-[8px] font-bold bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white transition-all"
+                                                    >
+                                                      Curta
+                                                    </button>
+                                                    <button
+                                                      onClick={() => updateEditorElement(el.id, { w: 80 })}
+                                                      className="py-2 px-2 rounded-xl border text-[8px] font-bold bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white transition-all"
+                                                    >
+                                                      Média
+                                                    </button>
+                                                    <button
+                                                      onClick={() => updateEditorElement(el.id, { w: 100, h: 5 })}
+                                                      className="py-2 px-2 rounded-xl border text-[8px] font-bold bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white transition-all"
+                                                    >
+                                                      Longa
+                                                    </button>
+                                                    <button
+                                                      onClick={() => updateEditorElement(el.id, { rotation: 0, w: 90 })}
+                                                      className="py-2 px-2 rounded-xl border text-[8px] font-bold bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white transition-all"
+                                                    >
+                                                      Cheia
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              </>
+                                            )}
                                           </div>
-                                          <div className="space-y-1.5">
-                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">H (mm)</label>
-                                            <input type="number" value={el.h} onChange={(e) => updateEditorElement(el.id, { h: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
-                                          </div>
-                                          <div className="space-y-1.5">
-                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Espessura</label>
-                                            <input type="number" min={0.5} step={0.5} value={el.strokeWidth ?? 1} onChange={(e) => updateEditorElement(el.id, { strokeWidth: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
-                                          </div>
+
+                                          {/* Estilo da Shape */}
                                           {el.type === "rect" && (
-                                            <button
-                                              onClick={() => updateEditorElement(el.id, { fill: !el.fill })}
-                                              className={`mt-5 rounded-xl border text-[10px] font-black transition-all ${el.fill ? "bg-accent text-black border-accent" : "bg-black/40 text-white/40 border-white/10"}`}
-                                            >
-                                              PREENCHIDO
-                                            </button>
+                                            <div className="glass-card rounded-xl p-5 border-white/10 bg-white/[0.03] space-y-4">
+                                              <div className="flex items-center gap-2 mb-3">
+                                                <SquareIcon size={14} className="text-accent" />
+                                                <span className="text-[10px] font-black text-white uppercase tracking-widest">Estilo</span>
+                                              </div>
+
+                                              <button
+                                                onClick={() => updateEditorElement(el.id, { fill: !el.fill })}
+                                                className={`w-full py-4 px-4 rounded-xl border text-sm font-black transition-all flex items-center justify-center gap-2 ${
+                                                  el.fill
+                                                    ? "bg-accent text-black border-accent shadow-lg shadow-accent/20"
+                                                    : "bg-black/40 text-white/40 border-white/10 hover:bg-white/5 hover:text-white"
+                                                }`}
+                                              >
+                                                <div className={`w-6 h-6 rounded border-2 ${el.fill ? "bg-current" : "bg-transparent"}`} />
+                                                <span>{el.fill ? "Preenchido" : "Contorno"}</span>
+                                              </button>
+
+                                              <div className="space-y-1.5">
+                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Cor da Borda</label>
+                                                <input
+                                                  type="color"
+                                                  value={el.color ?? "#000000"}
+                                                  onChange={(e) => updateEditorElement(el.id, { color: e.target.value })}
+                                                  className="w-full h-10 rounded-xl bg-transparent border border-white/10 cursor-pointer"
+                                                />
+                                              </div>
+
+                                              {/* Efeito 3D - Sombra */}
+                                              <div className="space-y-1.5">
+                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Efeito 3D</label>
+                                                <button
+                                                  onClick={() => updateEditorElement(el.id, { fill: true, color: "#0096DA" })}
+                                                  className="w-full py-2 px-4 rounded-xl border text-[10px] font-bold bg-[#0096DA]/20 border-[#0096DA]/40 text-[#0096DA] hover:bg-[#0096DA]/30 transition-all"
+                                                >
+                                                  Aplicar Azul 3D
+                                                </button>
+                                              </div>
+                                            </div>
                                           )}
-                                        </div>
+                                        </>
                                       )}
 
                                       {el.type === "image" && (
