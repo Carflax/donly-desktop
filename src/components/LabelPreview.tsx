@@ -19,6 +19,7 @@ export type LabelElement = {
   bcFormat?: string;
   fontFamily?: string;
   rotation?: number;
+  fieldBinding?: string;
 };
 
 export type LabelData = {
@@ -57,6 +58,8 @@ export default function LabelPreview({
   onSelectElement,
   onRemoveElement,
   onInteractionEnd,
+  drawingMode,
+  onAreaCreated,
 }: {
   data: LabelData;
   width: number;
@@ -67,6 +70,8 @@ export default function LabelPreview({
   onSelectElement?: (id: string | null) => void;
   onRemoveElement?: (id: string) => void;
   onInteractionEnd?: () => void;
+  drawingMode?: "text" | null;
+  onAreaCreated?: (bounds: { x: number; y: number; w: number; h: number }) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const draggingId = useRef<string | null>(null);
@@ -75,10 +80,13 @@ export default function LabelPreview({
   const dragStart = useRef({ x: 0, y: 0, elX: 0, elY: 0 });
   const resizeStart = useRef({ mmX: 0, mmY: 0, w: 0, h: 0, fontSize: 0 });
   const rotateStart = useRef({ cx: 0, cy: 0 });
+  const drawStart = useRef<{ x: number; y: number } | null>(null);
+  const [drawingRect, setDrawingRect] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
 
   const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [hoverHandle, setHoverHandle] = useState<"rotate" | "delete" | "resize" | "move" | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -91,12 +99,44 @@ export default function LabelPreview({
 
   const px = (mm: number) => (mm * dpi) / 25.4;
 
+  const wrapText = (ctx: CanvasRenderingContext2D, text: string, maxPx: number): string[] => {
+    const words = text.split(" ");
+    const lines: string[] = [];
+    let current = "";
+    for (const word of words) {
+      const test = current ? current + " " + word : word;
+      if (ctx.measureText(test).width > maxPx && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+    return lines.length ? lines : [""];
+  };
+
   useEffect(() => {
-    const handleGlobalClick = () =>
+    const handleGlobalClick = (e: MouseEvent) => {
       setContextMenu((p) => (p.visible ? { ...p, visible: false } : p));
-    window.addEventListener("click", handleGlobalClick);
-    return () => window.removeEventListener("click", handleGlobalClick);
-  }, []);
+
+      const target = e.target as HTMLElement;
+      // Se clicar fora do canvas E não for em elementos de interface (inputs, botões, menus), desmarca
+      if (
+        canvasRef.current &&
+        !canvasRef.current.contains(target) &&
+        !target.closest("button") &&
+        !target.closest("input") &&
+        !target.closest("select") &&
+        !target.closest(".glass-card") &&
+        !target.closest("aside")
+      ) {
+        onSelectElement?.(null);
+      }
+    };
+    window.addEventListener("mousedown", handleGlobalClick);
+    return () => window.removeEventListener("mousedown", handleGlobalClick);
+  }, [onSelectElement]);
 
   // Pre-load images to avoid async drawing glitches
   useEffect(() => {
@@ -136,11 +176,13 @@ export default function LabelPreview({
     elements.forEach((el) => {
       if (el.id === editingId) return;
       ctx.save();
+      const textFont = `${el.bold ? "bold " : ""}${el.italic ? "italic " : ""}${px(el.fontSize || 4)}px ${el.fontFamily || "Inter"}, sans-serif`;
       const w =
         el.type === "text"
-          ? el.content.length * (el.fontSize || 4) * 0.5
+          ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55)
           : el.w || 20;
-      const h = el.type === "text" ? el.fontSize || 4 : el.h || 10;
+      const lineH = el.type === "text" ? (el.fontSize || 4) * 1.3 : 0;
+      const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
 
       // Calculate rotation center
       let cx = el.x;
@@ -162,10 +204,18 @@ export default function LabelPreview({
       ctx.lineWidth = el.strokeWidth || 1;
 
       if (el.type === "text") {
-        ctx.font = `${el.bold ? "bold " : ""}${el.italic ? "italic " : ""}${px(el.fontSize || 4)}px ${el.fontFamily || "Inter"}, sans-serif`;
+        ctx.font = textFont;
         ctx.textAlign = (el.align || "center") as CanvasTextAlign;
         ctx.textBaseline = "middle";
-        ctx.fillText(el.content, 0, 0);
+        if (el.w !== undefined) {
+          const lines = wrapText(ctx, el.content, px(el.w));
+          const totalH = lines.length * px(lineH);
+          lines.forEach((line, i) => {
+            ctx.fillText(line, 0, -totalH / 2 + px(lineH) * i + px(lineH) / 2);
+          });
+        } else {
+          ctx.fillText(el.content, 0, 0);
+        }
       } else if (el.type === "barcode") {
         const tc = document.createElement("canvas");
         try {
@@ -262,8 +312,21 @@ export default function LabelPreview({
       ctx.lineTo(canvas.width, px(guides.y));
       ctx.stroke();
     }
-    ctx.setLineDash([]);
-  }, [data, width, height, dpi, guides, editingId, selectedId, imagesCache]);
+    // Draw text area preview while dragging
+    if (drawingRect) {
+      const rx = Math.min(drawingRect.x1, drawingRect.x2);
+      const ry = Math.min(drawingRect.y1, drawingRect.y2);
+      const rw = Math.abs(drawingRect.x2 - drawingRect.x1);
+      const rh = Math.abs(drawingRect.y2 - drawingRect.y1);
+      ctx.fillStyle = "rgba(0,150,218,0.06)";
+      ctx.fillRect(px(rx), px(ry), px(rw), px(rh));
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = "#0096DA";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(px(rx), px(ry), px(rw), px(rh));
+      ctx.setLineDash([]);
+    }
+  }, [data, width, height, dpi, guides, editingId, selectedId, imagesCache, drawingRect]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button === 2) return;
@@ -274,17 +337,19 @@ export default function LabelPreview({
       ((e.clientX - rect.left) * (canvas.width / rect.width) * 25.4) / dpi;
     const mmY =
       ((e.clientY - rect.top) * (canvas.height / rect.height) * 25.4) / dpi;
+    if (drawingMode) {
+      drawStart.current = { x: mmX, y: mmY };
+      setDrawingRect({ x1: mmX, y1: mmY, x2: mmX, y2: mmY });
+      return;
+    }
     if (selectedId) {
       const elements = data.custom[data.activeTab] || [];
       const el = elements.find((item) => item.id === selectedId);
       if (el) {
-        const w =
-          el.type === "text"
-            ? el.content.length * (el.fontSize || 4) * 0.5
-            : el.w || 20;
-        const h = el.type === "text" ? el.fontSize || 4 : el.h || 10;
+        const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
+        const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
         const cx = el.type === "text" ? el.x : el.x + w / 2;
-        const cy = el.type === "text" ? el.y - h / 2 : el.y + h / 2;
+        const cy = el.type === "text" ? el.y : el.y + h / 2;
         const rad = ((el.rotation || 0) * Math.PI) / 180;
         const dx = mmX - cx;
         const dy = mmY - cy;
@@ -310,8 +375,8 @@ export default function LabelPreview({
           resizeStart.current = {
             mmX,
             mmY,
-            w: el.w || 20,
-            h: el.h || 10,
+            w,
+            h,
             fontSize: el.fontSize || 4,
           };
           return;
@@ -322,19 +387,14 @@ export default function LabelPreview({
     let hit = false;
     for (let i = elements.length - 1; i >= 0; i--) {
       const el = elements[i];
-      const w =
-        el.type === "text"
-          ? el.content.length * (el.fontSize || 4) * 0.5
-          : el.w || 20;
-      const h = el.type === "text" ? el.fontSize || 4 : el.h || 10;
-      const isInsideX =
-        el.type === "text"
-          ? mmX >= el.x - w / 2 && mmX <= el.x + w / 2
-          : mmX >= el.x && mmX <= el.x + w;
-      const isInsideY =
-        el.type === "text"
-          ? mmY >= el.y - h && mmY <= el.y
-          : mmY >= el.y && mmY <= el.y + h;
+      const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
+      const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
+      const isInsideX = el.type === "text"
+        ? mmX >= el.x - w / 2 && mmX <= el.x + w / 2
+        : mmX >= el.x && mmX <= el.x + w;
+      const isInsideY = el.type === "text"
+        ? mmY >= el.y - h / 2 && mmY <= el.y + h / 2
+        : mmY >= el.y && mmY <= el.y + h;
       if (isInsideX && isInsideY) {
         draggingId.current = el.id;
         dragStart.current = { x: mmX, y: mmY, elX: el.x, elY: el.y };
@@ -354,6 +414,10 @@ export default function LabelPreview({
       ((e.clientX - rect.left) * (canvas.width / rect.width) * 25.4) / dpi;
     const mmY =
       ((e.clientY - rect.top) * (canvas.height / rect.height) * 25.4) / dpi;
+    if (drawStart.current) {
+      setDrawingRect({ x1: drawStart.current.x, y1: drawStart.current.y, x2: mmX, y2: mmY });
+      return;
+    }
     if (rotatingId.current && onUpdateElement) {
       const dx = mmX - rotateStart.current.cx;
       const dy = mmY - rotateStart.current.cy;
@@ -367,27 +431,56 @@ export default function LabelPreview({
       const elements = data.custom[data.activeTab] || [];
       const el = elements.find((item) => item.id === resizingId.current);
       if (el) {
-        if (el.type === "text") {
-          onUpdateElement(el.id, {
-            fontSize: Number(
-              Math.max(2, resizeStart.current.fontSize + dy / 2).toFixed(1),
-            ),
-          });
-        } else {
-          let newW = resizeStart.current.w + dx;
-          let newH = resizeStart.current.h + dy;
-          if (e.shiftKey) {
-            const ratio = resizeStart.current.w / resizeStart.current.h;
-            newW = newH * ratio;
-          }
-          onUpdateElement(el.id, {
-            w: Math.max(5, newW),
-            h: Math.max(2, newH),
-          });
+        let newW = resizeStart.current.w + dx;
+        let newH = resizeStart.current.h + dy;
+        if (e.shiftKey) {
+          const ratio = resizeStart.current.w / resizeStart.current.h;
+          newW = newH * ratio;
         }
+        onUpdateElement(el.id, {
+          w: Math.max(5, newW),
+          h: Math.max(2, newH),
+        });
       }
       return;
     }
+    // Hover handle detection (only when idle)
+    if (!draggingId.current && !resizingId.current && !rotatingId.current && selectedId) {
+      const elements = data.custom[data.activeTab] || [];
+      const el = elements.find((item) => item.id === selectedId);
+      let next: typeof hoverHandle = null;
+      if (el) {
+        const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
+        const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
+        const ecx = el.type === "text" ? el.x : el.x + w / 2;
+        const ecy = el.type === "text" ? el.y : el.y + h / 2;
+        const rad = ((el.rotation || 0) * Math.PI) / 180;
+        const ldx = mmX - ecx;
+        const ldy = mmY - ecy;
+        const lx = ldx * Math.cos(-rad) - ldy * Math.sin(-rad);
+        const ly = ldx * Math.sin(-rad) + ldy * Math.cos(-rad);
+        let rx = -w / 2;
+        if (el.type === "text" && el.align === "left") rx = 0;
+        else if (el.type === "text" && el.align === "right") rx = -w;
+        const ry = -h / 2;
+        const pxMm = 25.4 / dpi;
+        const rotLX = rx + w / 2;
+        const rotLY = ry - 20 * pxMm;
+        const delLX = rx + w + 4 * pxMm;
+        const delLY = ry - 4 * pxMm;
+        const resLX = rx + w;
+        const resLY = ry + h;
+        const r = 12 * pxMm;
+        if (Math.hypot(lx - rotLX, ly - rotLY) < r) next = "rotate";
+        else if (Math.hypot(lx - delLX, ly - delLY) < r) next = "delete";
+        else if (Math.hypot(lx - resLX, ly - resLY) < r) next = "resize";
+        else if (lx >= rx && lx <= rx + w && ly >= ry && ly <= ry + h) next = "move";
+      }
+      if (next !== hoverHandle) setHoverHandle(next);
+    } else if (!selectedId && hoverHandle !== null) {
+      setHoverHandle(null);
+    }
+
     if (!draggingId.current || !onUpdateElement) return;
     const dx = mmX - dragStart.current.x;
     const dy = mmY - dragStart.current.y;
@@ -401,19 +494,16 @@ export default function LabelPreview({
     );
     const g: { x?: number; y?: number } = {};
     if (el) {
-      const w =
-        el.type === "text"
-          ? el.content.length * (el.fontSize || 4) * 0.5
-          : el.w || 20;
-      const h = el.type === "text" ? el.fontSize || 4 : el.h || 10;
+      const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
+      const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
       const ecx = el.type === "text" ? fx : fx + w / 2;
-      const ecy = el.type === "text" ? fy - h / 2 : fy + h / 2;
+      const ecy = el.type === "text" ? fy : fy + h / 2;
       if (Math.abs(ecx - cx) < snap) {
         fx = el.type === "text" ? cx : cx - w / 2;
         g.x = cx;
       }
       if (Math.abs(ecy - cy) < snap) {
-        fy = el.type === "text" ? cy + h / 2 : cy - h / 2;
+        fy = el.type === "text" ? cy : cy - h / 2;
         g.y = cy;
       }
     }
@@ -425,12 +515,25 @@ export default function LabelPreview({
   };
 
   const handleMouseUp = () => {
+    if (drawStart.current && drawingRect) {
+      const x1 = Math.min(drawingRect.x1, drawingRect.x2);
+      const y1 = Math.min(drawingRect.y1, drawingRect.y2);
+      const w = Math.abs(drawingRect.x2 - drawingRect.x1);
+      const h = Math.abs(drawingRect.y2 - drawingRect.y1);
+      if (w > 3 && h > 3) {
+        onAreaCreated?.({ x: x1 + w / 2, y: y1 + h / 2, w, h });
+      }
+      drawStart.current = null;
+      setDrawingRect(null);
+      return;
+    }
     if (draggingId.current || resizingId.current || rotatingId.current)
       onInteractionEnd?.();
     draggingId.current = null;
     resizingId.current = null;
     rotatingId.current = null;
     setGuides({});
+    setHoverHandle(null);
   };
 
   return (
@@ -455,13 +558,13 @@ export default function LabelPreview({
             dpi;
           const el = data.custom[data.activeTab]?.find((it) => {
             if (it.type !== "text") return false;
-            const w = it.content.length * (it.fontSize || 4) * 0.5;
-            const h = it.fontSize || 4;
+            const w = it.w ?? it.content.length * (it.fontSize || 4) * 0.55;
+            const h = it.h ?? (it.fontSize || 4);
             return (
               mmX >= it.x - w / 2 &&
               mmX <= it.x + w / 2 &&
-              mmY >= it.y - h &&
-              mmY <= it.y
+              mmY >= it.y - h / 2 &&
+              mmY <= it.y + h / 2
             );
           });
           if (el) {
@@ -483,16 +586,13 @@ export default function LabelPreview({
           const el = [...(data.custom[data.activeTab] || [])]
             .reverse()
             .find((it) => {
-              const w =
-                it.type === "text"
-                  ? it.content.length * (it.fontSize || 4) * 0.5
-                  : it.w || 20;
-              const h = it.type === "text" ? it.fontSize || 4 : it.h || 10;
+              const w = it.type === "text" ? (it.w ?? it.content.length * (it.fontSize || 4) * 0.55) : it.w || 20;
+              const h = it.type === "text" ? (it.h ?? it.fontSize ?? 4) : it.h || 10;
               return it.type === "text"
                 ? mmX >= it.x - w / 2 &&
                     mmX <= it.x + w / 2 &&
-                    mmY >= it.y - h &&
-                    mmY <= it.y
+                    mmY >= it.y - h / 2 &&
+                    mmY <= it.y + h / 2
                 : mmX >= it.x &&
                     mmX <= it.x + w &&
                     mmY >= it.y &&
@@ -507,40 +607,65 @@ export default function LabelPreview({
             });
         }}
         style={{
-          cursor: rotatingId.current
+          cursor: drawingMode
             ? "crosshair"
-            : resizingId.current
-              ? "nwse-resize"
-              : draggingId.current
-                ? "grabbing"
-                : "crosshair",
+            : rotatingId.current
+              ? "grabbing"
+              : resizingId.current
+                ? "nwse-resize"
+                : draggingId.current
+                  ? "grabbing"
+                  : hoverHandle === "rotate"
+                    ? "grab"
+                    : hoverHandle === "delete"
+                      ? "pointer"
+                      : hoverHandle === "resize"
+                        ? "nwse-resize"
+                        : hoverHandle === "move"
+                          ? "move"
+                          : "default",
         }}
         className="max-w-full h-auto rounded border border-slate-300 bg-white shadow-2xl"
       />
-      {editingId && (
-        <input
-          autoFocus
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onBlur={() => {
-            if (editingId) onUpdateElement?.(editingId, { content: editValue });
-            setEditingId(null);
-          }}
-          onKeyDown={(e) =>
-            e.key === "Enter" &&
-            (editingId && onUpdateElement?.(editingId, { content: editValue }),
-            setEditingId(null))
-          }
-          className="absolute bg-white/80 border border-accent/30 rounded px-1 outline-none text-black text-center"
-          style={{
-            left: `${(data.custom[data.activeTab]?.find((e) => e.id === editingId)!.x / width) * 100}%`,
-            bottom: `${((height - data.custom[data.activeTab]?.find((e) => e.id === editingId)!.y) / height) * 100}%`,
-            fontSize: `${(px(data.custom[data.activeTab]?.find((e) => e.id === editingId)!.fontSize || 4) * (canvasRef.current?.getBoundingClientRect().width || 1)) / (canvasRef.current?.width || 1)}px`,
-            lineHeight: 1,
-            transform: "translate(-50%, 5px)",
-          }}
-        />
-      )}
+      {editingId && (() => {
+        const el = data.custom[data.activeTab]?.find((e) => e.id === editingId);
+        if (!el) return null;
+        const elW = el.w ?? el.content.length * (el.fontSize || 4) * 0.55;
+        const elH = el.h ?? (el.fontSize || 4);
+        const scale = (canvasRef.current?.getBoundingClientRect().width || 1) / (canvasRef.current?.width || 1);
+        return (
+          <textarea
+            autoFocus
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={() => {
+              if (editingId) onUpdateElement?.(editingId, { content: editValue });
+              setEditingId(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                onUpdateElement?.(editingId, { content: editValue });
+                setEditingId(null);
+              }
+            }}
+            className="absolute bg-white border-2 border-accent rounded p-0 m-0 outline-none text-black resize-none overflow-hidden"
+            style={{
+              left: `${((el.x - elW / 2) / width) * 100}%`,
+              top: `${((el.y - elH / 2) / height) * 100}%`,
+              width: `${(elW / width) * 100}%`,
+              height: `${(elH / height) * 100}%`,
+              fontSize: `${px(el.fontSize || 4) * scale}px`,
+              lineHeight: 1.2,
+              fontFamily: `${el.fontFamily || "Inter"}, sans-serif`,
+              fontWeight: el.bold ? "bold" : "normal",
+              fontStyle: el.italic ? "italic" : "normal",
+              textAlign: el.align || "center",
+              paddingTop: `${Math.max(0, (elH * scale * (dpi / 25.4) - (el.fontSize || 4) * scale * (dpi / 25.4) * 1.2) / 2)}px`,
+              boxSizing: "border-box"
+            }}
+          />
+        );
+      })()}
       {contextMenu.visible && (
         <div
           className="fixed z-[100] bg-slate-900/90 backdrop-blur-xl border border-white/20 rounded-xl py-2 shadow-2xl min-w-[120px]"

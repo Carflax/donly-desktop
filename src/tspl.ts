@@ -13,9 +13,11 @@ export function generateTSPL(
   height: number,
   labelWidthmm: number,
   labelHeightmm: number,
-  copies: number = 1
+  copies: number = 1,
+  offsetX: number = 0,
+  offsetY: number = 0
 ): Uint8Array {
-  const HEADER = `SIZE ${labelWidthmm} mm, ${labelHeightmm} mm\r\nGAP 3 mm, 0 mm\r\nDIRECTION 1,0\r\nCLS\r\n`;
+  const HEADER = `SIZE ${labelWidthmm} mm, ${labelHeightmm} mm\r\nGAP 3 mm, 0 mm\r\nDIRECTION 1,0\r\nCLS\r\nREFERENCE ${offsetX},${offsetY}\r\n`;
   const FOOTER = `\r\nPRINT 1,${copies}\r\n`;
 
   const rowBytes = Math.floor((width + 7) / 8);
