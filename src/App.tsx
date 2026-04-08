@@ -32,6 +32,8 @@ import LabelPreview, {
 } from "./components/LabelPreview";
 import { canvasToMonoBitmap, generateTSPL } from "./tspl";
 import daniloImg from "./danilo.png";
+import appIcon from "./assets/icon.png";
+
 
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -761,8 +763,8 @@ export default function App() {
       >
         <div className="px-6 w-full mb-12">
           <div className="flex items-center gap-3 group cursor-pointer">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-accent to-accent/60 flex items-center justify-center shadow-lg shadow-accent/20 group-hover:scale-105 transition-transform">
-              <Printer size={22} className="text-black" />
+            <div className="w-10 h-10 flex items-center justify-center group-hover:scale-105 transition-transform overflow-hidden">
+              <img src={appIcon} className="w-10 h-10 object-contain" alt="DonlyX" />
             </div>
             <div className="hidden lg:block overflow-hidden">
               <h2 className="text-lg font-black text-white tracking-tighter leading-none">
