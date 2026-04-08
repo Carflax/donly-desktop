@@ -1332,21 +1332,6 @@ export default function App() {
                           setEditorData((p: any) => ({ ...p, name: v }))
                         }
                       />
-                      <div className="grid grid-cols-2 gap-4">
-                        <Field
-                          label="LARGURA (mm)"
-                          value={editorData.w.toString()}
-                          onChange={(v) => {
-                            const val = Number(v);
-                            setEditorData((p: any) => ({ ...p, w: val }));
-                          }}
-                        />
-                        <Field
-                          label="ALTURA (mm)"
-                          value={editorData.h.toString()}
-                          onChange={(v) => setEditorData((p: any) => ({ ...p, h: Number(v) }))}
-                        />
-                      </div>
                       <div className="space-y-1.5 pt-2">
                         <label className="text-[9px] font-bold text-white/60 uppercase tracking-widest ml-1">
                           LAYOUT DE COLUNAS
