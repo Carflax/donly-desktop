@@ -58,6 +58,7 @@ export default function LabelPreview({
   onUpdateElement,
   selectedId,
   onSelectElement,
+  onCloneElements,
   onRemoveElement,
   onInteractionEnd,
   drawingMode,
@@ -75,6 +76,8 @@ export default function LabelPreview({
   onUpdateElement?: (id: string, updates: Partial<LabelElement>) => void;
   selectedId?: string | null;
   onSelectElement?: (id: string | null) => void;
+  onSelectMultiple?: (ids: Set<string>) => void;
+  onCloneElements?: (ids: string[]) => string[];
   onRemoveElement?: (id: string) => void;
   onInteractionEnd?: () => void;
   drawingMode?: "text" | null;
@@ -88,7 +91,6 @@ export default function LabelPreview({
   gap?: number;
   queueItems?: any[];
   selectedIds?: Set<string>;
-  onSelectMultiple?: (ids: Set<string>) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const draggingId = useRef<string | null>(null);
@@ -131,6 +133,10 @@ export default function LabelPreview({
   } | null>(null);
   const selectionStart = useRef<{ x: number; y: number } | null>(null);
   const selecting = useRef<boolean>(false);
+  const clonedThisDrag = useRef<boolean>(false);
+  const dragInitialPositions = useRef<Map<string, { x: number; y: number }>>(
+    new Map(),
+  );
 
   const px = (mm: number) => (mm * dpi) / 25.4;
 
@@ -671,6 +677,22 @@ export default function LabelPreview({
         elY: clickedElement.y,
       };
 
+      // Armazena posições iniciais de todos os selecionados para arraste suave
+      dragInitialPositions.current.clear();
+      selectedIds.forEach((id) => {
+        const el = data.custom[data.activeTab]?.find((it) => it.id === id);
+        if (el) {
+          dragInitialPositions.current.set(id, { x: el.x, y: el.y });
+        }
+      });
+      // Garante que o elemento clicado também esteja lá mesmo que não estivesse no set antes
+      if (!dragInitialPositions.current.has(clickedElement.id)) {
+        dragInitialPositions.current.set(clickedElement.id, {
+          x: clickedElement.x,
+          y: clickedElement.y,
+        });
+      }
+
       selectionStart.current = null;
       selecting.current = false;
       setSelectionBox(null);
@@ -828,10 +850,28 @@ export default function LabelPreview({
     }
 
     if (!draggingId.current || !onUpdateElement) return;
-    const dx = mmX - dragStart.current.x;
-    const dy = mmY - dragStart.current.y;
-    let fx = dragStart.current.elX + dx;
-    let fy = dragStart.current.elY + dy;
+
+    // Duplicação com ALT
+    if (e.altKey && !clonedThisDrag.current && selectedIds.size > 0) {
+      if (onCloneElements) {
+        const newIds = onCloneElements(Array.from(selectedIds));
+        if (newIds && newIds.length > 0) {
+          clonedThisDrag.current = true;
+          // Se o elemento sendo arrastado está entre os originais, 
+          // precisamos achar seu par clonado para continuar o arraste fluido.
+          const oldIdsArray = Array.from(selectedIds);
+          const idx = oldIdsArray.indexOf(draggingId.current);
+          if (idx !== -1 && newIds[idx]) {
+             draggingId.current = newIds[idx];
+          }
+        }
+      }
+    }
+
+    const totalDx = mmX - dragStart.current.x;
+    const totalDy = mmY - dragStart.current.y;
+    let fx = dragStart.current.elX + totalDx;
+    let fy = dragStart.current.elY + totalDy;
     const snap = 2;
     const cx = width / 2;
     const cy = height / 2;
@@ -862,28 +902,23 @@ export default function LabelPreview({
 
     // Mover tudo que está selecionado
     if (selectedIds.has(draggingId.current)) {
+      // Diferença real do elemento principal (com snap)
+      const realDx = fx - dragStart.current.elX;
+      const realDy = fy - dragStart.current.elY;
+
       selectedIds.forEach((id) => {
-        const targetEl = data.custom[data.activeTab]?.find(
-          (it) => it.id === id,
-        );
-        if (targetEl) {
-          const offsetX =
-            targetEl.id === draggingId.current ? fx : targetEl.x + dx;
-          const offsetY =
-            targetEl.id === draggingId.current ? fy : targetEl.y + dy;
-          onUpdateElement(targetEl.id, {
-            x: Math.round(offsetX),
-            y: Math.round(offsetY),
+        const initial = dragInitialPositions.current.get(id);
+        if (initial) {
+          onUpdateElement(id, {
+            x: initial.x + realDx,
+            y: initial.y + realDy,
           });
         }
       });
-      // Importante: atualizar o ponto inicial do arraste para o próximo frame
-      dragStart.current.x = mmX;
-      dragStart.current.y = mmY;
     } else {
       onUpdateElement(draggingId.current, {
-        x: Math.round(fx),
-        y: Math.round(fy),
+        x: fx,
+        y: fy,
       });
     }
   };
@@ -938,6 +973,9 @@ export default function LabelPreview({
     draggingId.current = null;
     resizingId.current = null;
     rotatingId.current = null;
+    clonedThisDrag.current = false;
+    dragInitialPositions.current.clear();
+    dragStart.current = { x: 0, y: 0, elX: 0, elY: 0 };
     setGuides({});
     setHoverHandle(null);
   };

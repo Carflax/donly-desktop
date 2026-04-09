@@ -835,6 +835,25 @@ export default function App() {
     setSelectedIds(new Set([id]));
   };
 
+  const duplicateElements = (ids: string[]) => {
+    const newElements = [...editorData.elements];
+    const newSelectedIds = new Set<string>();
+
+    ids.forEach((id) => {
+      const el = editorData.elements.find((e) => e.id === id);
+      if (el) {
+        const nextId = Math.random().toString(36).substr(2, 9);
+        newElements.push({ ...el, id: nextId });
+        newSelectedIds.add(nextId);
+      }
+    });
+
+    setEditorData((p) => ({ ...p, elements: newElements }));
+    pushToHistory(newElements);
+    setSelectedIds(newSelectedIds);
+    return Array.from(newSelectedIds);
+  };
+
   const updateEditorElement = (id: string, updates: Partial<LabelElement>) => {
     setEditorData((p) => ({
       ...p,
@@ -2761,6 +2780,7 @@ export default function App() {
                         }
                       }}
                       onSelectMultiple={(ids) => setSelectedIds(ids)}
+                      onCloneElements={duplicateElements}
                       onRemoveElement={removeEditorElement}
                       onInteractionEnd={() =>
                         pushToHistory(editorData.elements)
