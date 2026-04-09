@@ -494,7 +494,7 @@ export default function App() {
           width2: 50,
           height2: 30,
           gap: 3,
-          offsetX: 8,
+          offsetX: 3,
           offsetY: 0,
           theme: "dark" as "dark" | "glass",
         };
@@ -1313,7 +1313,7 @@ export default function App() {
 
       for (let i = 0; i < itemsToPrint.length; i += step) {
         const item = itemsToPrint[i];
-        const item2 = isTwoCols ? (itemsToPrint[i + 1] ?? item) : null;
+        const item2 = isTwoCols ? (itemsToPrint[i + 1] ?? null) : null;
 
         // Aplica item da coluna esquerda
         if (item) {
@@ -1328,13 +1328,13 @@ export default function App() {
           const leftCanvas = captureCanvas();
           if (!leftCanvas) throw new Error("Falha ao capturar coluna esquerda");
 
-          // Aplica item da coluna direita (se diferente)
-          if (item2 && item2 !== item) {
+          // Coluna direita: aplica item2 se existir, senão deixa branco
+          let rightCanvas: HTMLCanvasElement | null = null;
+          if (item2) {
             aplicarProdutoNaEtiqueta(item2);
             await new Promise((resolve) => setTimeout(resolve, 60));
+            rightCanvas = captureCanvas();
           }
-          const rightCanvas = captureCanvas();
-          if (!rightCanvas) throw new Error("Falha ao capturar coluna direita");
 
           const tempCanvas = document.createElement("canvas");
           tempCanvas.width = pxW;
@@ -1344,7 +1344,7 @@ export default function App() {
             tctx.fillStyle = "white";
             tctx.fillRect(0, 0, pxW, pxH);
             tctx.drawImage(leftCanvas, 0, 0);
-            tctx.drawImage(rightCanvas, offsetPx, 0);
+            if (rightCanvas) tctx.drawImage(rightCanvas, offsetPx, 0);
           }
           finalCanvas = tempCanvas;
         }
@@ -1686,10 +1686,9 @@ export default function App() {
                                 className="flex-1 bg-white/[0.03] border border-white/10 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-accent/40 focus:bg-white/[0.06] transition-all text-center text-lg placeholder:text-white/10 shadow-inner"
                               />
                               <input
-                                type="number"
+                                type="text"
                                 value={volumes}
                                 onChange={(e) => setVolumes(e.target.value)}
-                                min="1"
                                 placeholder="Volumes"
                                 className="w-24 bg-white/[0.03] border border-white/10 rounded-2xl px-4 py-4 text-white font-bold outline-none focus:border-accent/40 focus:bg-white/[0.06] transition-all text-center text-lg placeholder:text-white/10 shadow-inner"
                               />
