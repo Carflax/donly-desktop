@@ -1278,36 +1278,64 @@ export default function App() {
         : "Preparando impressão...",
     );
 
-    try {
-      for (let i = 0; i < itemsToPrint.length; i++) {
-        const item = itemsToPrint[i];
+    // Helper: captura o canvas atual como uma imagem em memória
+    const captureCanvas = (): HTMLCanvasElement | null => {
+      const src = document.querySelector("canvas") as HTMLCanvasElement | null;
+      if (!src) return null;
+      const copy = document.createElement("canvas");
+      copy.width = src.width;
+      copy.height = src.height;
+      copy.getContext("2d")?.drawImage(src, 0, 0);
+      return copy;
+    };
 
-        // Se estiver imprimindo da fila, aplica os dados do item
+    try {
+      const canvas = document.querySelector("canvas") as HTMLCanvasElement | null;
+      if (!canvas) throw new Error("Preview não encontrado");
+
+      const firstItem = itemsToPrint[0];
+      const isTwoCols = firstItem
+        ? templatesList.find((t) => t.id === firstItem.templateId)?.columns === 2
+        : editorData.columns === 2;
+      const gap = config.gap || 0;
+      const singleW = editorData.w;
+      const totalW = isTwoCols ? singleW * 2 + gap : singleW;
+      const h_mm = editorData.h;
+      const dpi = 203;
+      const pxW = Math.round((totalW * dpi) / 25.4);
+      const pxH = Math.round((h_mm * dpi) / 25.4);
+      const offsetPx = Math.round(((singleW + gap) * dpi) / 25.4);
+      const offX = Math.round((config.offsetX || 0) * (dpi / 25.4));
+      const offY = Math.round((config.offsetY || 0) * (dpi / 25.4));
+
+      const step = isTwoCols ? 2 : 1;
+      const totalLabels = Math.ceil(itemsToPrint.length / step);
+
+      for (let i = 0; i < itemsToPrint.length; i += step) {
+        const item = itemsToPrint[i];
+        const item2 = isTwoCols ? (itemsToPrint[i + 1] ?? item) : null;
+
+        // Aplica item da coluna esquerda
         if (item) {
           aplicarProdutoNaEtiqueta(item);
-          // Pequena pausa para o React atualizar o canvas
           await new Promise((resolve) => setTimeout(resolve, 60));
         }
 
-        const canvas = document.querySelector("canvas");
-        if (!canvas) throw new Error("Preview não encontrado");
-        const ctx = canvas.getContext("2d");
-        if (!ctx) throw new Error("Contexto 2D não encontrado");
-
-        const isTwoCols = item
-          ? templatesList.find((t) => t.id === item.templateId)?.columns === 2
-          : editorData.columns === 2;
-        const gap = config.gap || 0;
-        const singleW = editorData.w;
-        const totalW = isTwoCols ? singleW * 2 + gap : singleW;
-        const h_mm = editorData.h;
-        const dpi = 203;
-
-        let finalCanvas = canvas;
-        let pxW = Math.round((totalW * dpi) / 25.4);
-        let pxH = Math.round((h_mm * dpi) / 25.4);
+        let finalCanvas: HTMLCanvasElement = canvas;
 
         if (isTwoCols) {
+          // Captura coluna esquerda
+          const leftCanvas = captureCanvas();
+          if (!leftCanvas) throw new Error("Falha ao capturar coluna esquerda");
+
+          // Aplica item da coluna direita (se diferente)
+          if (item2 && item2 !== item) {
+            aplicarProdutoNaEtiqueta(item2);
+            await new Promise((resolve) => setTimeout(resolve, 60));
+          }
+          const rightCanvas = captureCanvas();
+          if (!rightCanvas) throw new Error("Falha ao capturar coluna direita");
+
           const tempCanvas = document.createElement("canvas");
           tempCanvas.width = pxW;
           tempCanvas.height = pxH;
@@ -1315,21 +1343,16 @@ export default function App() {
           if (tctx) {
             tctx.fillStyle = "white";
             tctx.fillRect(0, 0, pxW, pxH);
-            // Desenha a primeira etiqueta
-            tctx.drawImage(canvas, 0, 0);
-            // Desenha a segunda etiqueta
-            const offsetPx = Math.round(((singleW + gap) * dpi) / 25.4);
-            tctx.drawImage(canvas, offsetPx, 0);
-            finalCanvas = tempCanvas;
+            tctx.drawImage(leftCanvas, 0, 0);
+            tctx.drawImage(rightCanvas, offsetPx, 0);
           }
+          finalCanvas = tempCanvas;
         }
 
         const finalCtx = finalCanvas.getContext("2d");
         if (!finalCtx) throw new Error("Falha ao processar imagem final");
 
         const bitmap = canvasToMonoBitmap(finalCtx, pxW, pxH);
-        const offX = Math.round((config.offsetX || 0) * (dpi / 25.4));
-        const offY = Math.round((config.offsetY || 0) * (dpi / 25.4));
 
         const tspl = generateTSPL(
           bitmap,
@@ -1348,7 +1371,8 @@ export default function App() {
         });
 
         if (printQueue.length > 0) {
-          setPrintStatus(`Imprimindo: ${i + 1} de ${itemsToPrint.length}`);
+          const labelNum = Math.floor(i / step) + 1;
+          setPrintStatus(`Imprimindo: ${labelNum} de ${totalLabels}`);
         }
       }
 
