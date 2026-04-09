@@ -359,7 +359,7 @@ const DEFAULT_TEMPLATES: Template[] = [
       }
     ],
   },
-        {
+          {
     id: "despacho",
     label: "Despacho",
     size: "100x50mm",
@@ -414,7 +414,7 @@ const DEFAULT_TEMPLATES: Template[] = [
         type: "text",
         x: 25.93172968127854,
         y: 23.646874837766035,
-        content: "000001061732",
+        content: "000000000000",
         w: 22.680280349787175,
         h: 5.400066749949327,
         fontSize: 4,
@@ -440,9 +440,9 @@ const DEFAULT_TEMPLATES: Template[] = [
       {
         id: "hadshsn37",
         type: "text",
-        x: 74.56884355712793,
+        x: 76.24912390691512,
         y: 23.646874837766035,
-        content: " 5",
+        content: " 0",
         w: 17.63943930042565,
         h: 4.199866500101345,
         fontSize: 4,
