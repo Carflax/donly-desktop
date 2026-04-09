@@ -64,6 +64,9 @@ export default function LabelPreview({
   onAreaCreated,
   columns,
   gap,
+  queueItems,
+  selectedIds = new Set(),
+  onSelectMultiple,
 }: {
   data: LabelData;
   width: number;
@@ -75,9 +78,17 @@ export default function LabelPreview({
   onRemoveElement?: (id: string) => void;
   onInteractionEnd?: () => void;
   drawingMode?: "text" | null;
-  onAreaCreated?: (bounds: { x: number; y: number; w: number; h: number }) => void;
+  onAreaCreated?: (bounds: {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  }) => void;
   columns?: 1 | 2;
   gap?: number;
+  queueItems?: any[];
+  selectedIds?: Set<string>;
+  onSelectMultiple?: (ids: Set<string>) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const draggingId = useRef<string | null>(null);
@@ -87,12 +98,19 @@ export default function LabelPreview({
   const resizeStart = useRef({ mmX: 0, mmY: 0, w: 0, h: 0, fontSize: 0 });
   const rotateStart = useRef({ cx: 0, cy: 0 });
   const drawStart = useRef<{ x: number; y: number } | null>(null);
-  const [drawingRect, setDrawingRect] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [drawingRect, setDrawingRect] = useState<{
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+  } | null>(null);
 
   const [guides, setGuides] = useState<{ x?: number; y?: number }>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
-  const [hoverHandle, setHoverHandle] = useState<"rotate" | "delete" | "resize" | "move" | null>(null);
+  const [hoverHandle, setHoverHandle] = useState<
+    "rotate" | "delete" | "resize" | "move" | null
+  >(null);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -111,13 +129,16 @@ export default function LabelPreview({
     h: number;
     active: boolean;
   } | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const selectionStart = useRef<{ x: number; y: number } | null>(null);
   const selecting = useRef<boolean>(false);
 
   const px = (mm: number) => (mm * dpi) / 25.4;
 
-  const wrapText = (ctx: CanvasRenderingContext2D, text: string, maxPx: number): string[] => {
+  const wrapText = (
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    maxPx: number,
+  ): string[] => {
     const words = text.split(" ");
     const lines: string[] = [];
     let current = "";
@@ -199,7 +220,8 @@ export default function LabelPreview({
         el.type === "text"
           ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55)
           : el.w || 20;
-      const lineH = el.type === "text" ? (el.fontSize || 4) * (el.lineHeight || 1.3) : 0;
+      const lineH =
+        el.type === "text" ? (el.fontSize || 4) * (el.lineHeight || 1.3) : 0;
       const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
 
       // Calculate rotation center
@@ -243,7 +265,13 @@ export default function LabelPreview({
           ctx.imageSmoothingEnabled = false;
           const tSize = Math.max(0.1, el.bcFontSize ?? 2.8);
           const dist = el.bcLabelDist ?? 1;
-          ctx.drawImage(tc, px(-w / 2), px(-h / 2), px(w), px(h - tSize - dist));
+          ctx.drawImage(
+            tc,
+            px(-w / 2),
+            px(-h / 2),
+            px(w),
+            px(h - tSize - dist),
+          );
           ctx.imageSmoothingEnabled = true;
           ctx.font = `${Math.round(px(tSize))}px Inter, sans-serif`;
           ctx.textAlign = "center";
@@ -280,11 +308,11 @@ export default function LabelPreview({
         }
       }
 
-      if (el.id === selectedId) {
-        ctx.strokeStyle = "#0096DA";
-        ctx.lineWidth = 1;
-        const rectW = el.type === "text" ? w : w;
-        const rectH = el.type === "text" ? h : h;
+      if (selectedIds.has(el.id)) {
+        ctx.strokeStyle = el.id === selectedId ? "#0096DA" : "#0096DA88";
+        ctx.lineWidth = el.id === selectedId ? 2 : 1.5;
+        const rectW = w;
+        const rectH = h;
         let rx = -rectW / 2;
         let ry = -rectH / 2;
 
@@ -295,38 +323,41 @@ export default function LabelPreview({
 
         ctx.strokeRect(px(rx) - 2, px(ry) - 2, px(rectW) + 4, px(rectH) + 4);
 
-        // Resize Handle
-        ctx.fillStyle = "white";
-        ctx.fillRect(px(rx + rectW) - 6, px(ry + rectH) - 6, 12, 12);
-        ctx.strokeRect(px(rx + rectW) - 6, px(ry + rectH) - 6, 12, 12);
+        // Only show full handles for the Primary selection (selectedId)
+        if (el.id === selectedId) {
+          // Resize Handle
+          ctx.fillStyle = "white";
+          ctx.fillRect(px(rx + rectW) - 6, px(ry + rectH) - 6, 12, 12);
+          ctx.strokeRect(px(rx + rectW) - 6, px(ry + rectH) - 6, 12, 12);
 
-        // Remove Handle
-        ctx.fillStyle = "#EF4444";
-        ctx.beginPath();
-        ctx.arc(px(rx + rectW) + 4, px(ry) - 4, 11, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(px(rx + rectW) - 1, px(ry) - 9);
-        ctx.lineTo(px(rx + rectW) + 9, px(ry) + 1);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(px(rx + rectW) + 9, px(ry) - 9);
-        ctx.lineTo(px(rx + rectW) - 1, px(ry) + 1);
-        ctx.stroke();
+          // Remove Handle
+          ctx.fillStyle = "#EF4444";
+          ctx.beginPath();
+          ctx.arc(px(rx + rectW) + 4, px(ry) - 4, 11, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "white";
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(px(rx + rectW) - 1, px(ry) - 9);
+          ctx.lineTo(px(rx + rectW) + 9, px(ry) + 1);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(px(rx + rectW) + 9, px(ry) - 9);
+          ctx.lineTo(px(rx + rectW) - 1, px(ry) + 1);
+          ctx.stroke();
 
-        // Rotate Handle
-        ctx.strokeStyle = "#0096DA";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(px(rx + rectW / 2), px(ry) - 2);
-        ctx.lineTo(px(rx + rectW / 2), px(ry) - 20);
-        ctx.stroke();
-        ctx.fillStyle = "#0096DA";
-        ctx.beginPath();
-        ctx.arc(px(rx + rectW / 2), px(ry) - 20, 8, 0, Math.PI * 2);
-        ctx.fill();
+          // Rotate Handle
+          ctx.strokeStyle = "#0096DA";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(px(rx + rectW / 2), px(ry) - 2);
+          ctx.lineTo(px(rx + rectW / 2), px(ry) - 20);
+          ctx.stroke();
+          ctx.fillStyle = "#0096DA";
+          ctx.beginPath();
+          ctx.arc(px(rx + rectW / 2), px(ry) - 20, 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
       ctx.restore();
     });
@@ -336,88 +367,124 @@ export default function LabelPreview({
       const singleW = (width - (gap || 0)) / 2;
       const offsetMm = singleW + (gap || 0);
 
-      elements.forEach((el) => {
-        if (el.id === editingId) return;
-        ctx.save();
-        const textFont = `${el.bold ? "bold " : ""}${el.italic ? "italic " : ""}${px(el.fontSize || 4)}px ${el.fontFamily || "Inter"}, sans-serif`;
-        const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
-        const lineH = el.type === "text" ? (el.fontSize || 4) * (el.lineHeight || 1.3) : 0;
-        const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
+      // Se há itens na fila, determina quantas colunas renderizar
+      const hasQueueItems = queueItems && queueItems.length > 0;
+      const shouldRenderSecondColumn = hasQueueItems
+        ? queueItems.length >= 2
+        : true; // Se não tem fila, clona (comportamento padrão)
 
-        let cx = el.x + offsetMm;
-        let cy = el.y;
+      if (shouldRenderSecondColumn) {
+        // Se tem fila, usa elementos do segundo item; senão, clona os mesmos elementos
+        const secondColumnElements =
+          hasQueueItems && queueItems.length >= 2
+            ? data.custom[queueItems[1]?.templateId || data.activeTab] ||
+              elements
+            : elements;
 
-        if (el.type !== "text") {
-          cx = (el.x + offsetMm) + w / 2;
-          cy = el.y + h / 2;
-        }
+        secondColumnElements.forEach((el) => {
+          if (el.id === editingId) return;
+          ctx.save();
+          const textFont = `${el.bold ? "bold " : ""}${el.italic ? "italic " : ""}${px(el.fontSize || 4)}px ${el.fontFamily || "Inter"}, sans-serif`;
+          const w =
+            el.type === "text"
+              ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55)
+              : el.w || 20;
+          const lineH =
+            el.type === "text"
+              ? (el.fontSize || 4) * (el.lineHeight || 1.3)
+              : 0;
+          const h =
+            el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
 
-        ctx.translate(px(cx), px(cy));
-        ctx.rotate(((el.rotation || 0) * Math.PI) / 180);
-        ctx.fillStyle = "black";
-        ctx.strokeStyle = "black";
-        ctx.lineWidth = el.strokeWidth || 1;
+          let cx = el.x + offsetMm;
+          let cy = el.y;
 
-        if (el.type === "text") {
-          ctx.font = textFont;
-          ctx.textAlign = (el.align || "center") as CanvasTextAlign;
-          ctx.textBaseline = "middle";
-          const wrapW = el.w ?? width;
-          const lines = wrapText(ctx, el.content, px(wrapW));
-          const totalH = lines.length * px(lineH);
-          lines.forEach((line, i) => {
-            ctx.fillText(line, 0, -totalH / 2 + px(lineH) * i + px(lineH) / 2);
-          });
-        } else if (el.type === "barcode") {
-          const tc = document.createElement("canvas");
-          try {
-            JsBarcode(tc, el.content, {
+          if (el.type !== "text") {
+            cx = el.x + offsetMm + w / 2;
+            cy = el.y + h / 2;
+          }
+
+          ctx.translate(px(cx), px(cy));
+          ctx.rotate(((el.rotation || 0) * Math.PI) / 180);
+          ctx.fillStyle = "black";
+          ctx.strokeStyle = "black";
+          ctx.lineWidth = el.strokeWidth || 1;
+
+          if (el.type === "text") {
+            ctx.font = textFont;
+            ctx.textAlign = (el.align || "center") as CanvasTextAlign;
+            ctx.textBaseline = "middle";
+            const wrapW = el.w ?? width;
+            const lines = wrapText(ctx, el.content, px(wrapW));
+            const totalH = lines.length * px(lineH);
+            lines.forEach((line, i) => {
+              ctx.fillText(
+                line,
+                0,
+                -totalH / 2 + px(lineH) * i + px(lineH) / 2,
+              );
+            });
+          } else if (el.type === "barcode") {
+            const tc = document.createElement("canvas");
+            try {
+              JsBarcode(tc, el.content, {
                 format: el.bcFormat || "CODE128",
                 width: 2,
                 height: 100,
                 displayValue: false,
-            });
-            ctx.imageSmoothingEnabled = false;
-            const tSize = Math.max(0.1, el.bcFontSize ?? 2.8);
-            const dist = el.bcLabelDist ?? 1;
-            ctx.drawImage(tc, px(-w / 2), px(-h / 2), px(w), px(h - tSize - dist));
-            ctx.imageSmoothingEnabled = true;
-            ctx.font = `${Math.round(px(tSize))}px Inter, sans-serif`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "bottom";
-            ctx.fillText(el.content, 0, px(h / 2));
-          } catch (e) {}
-        } else if (el.type === "image") {
-          const cachedImg = imagesCache[el.content];
-          if (cachedImg) {
-            ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(cachedImg, px(-w / 2), px(-h / 2), px(w), px(h));
-            ctx.imageSmoothingEnabled = true;
-          }
-        } else if (el.type === "line") {
-          ctx.beginPath();
-          ctx.moveTo(px(-w / 2), 0);
-          ctx.lineTo(px(w / 2), 0);
+              });
+              ctx.imageSmoothingEnabled = false;
+              const tSize = Math.max(0.1, el.bcFontSize ?? 2.8);
+              const dist = el.bcLabelDist ?? 1;
+              ctx.drawImage(
+                tc,
+                px(-w / 2),
+                px(-h / 2),
+                px(w),
+                px(h - tSize - dist),
+              );
+              ctx.imageSmoothingEnabled = true;
+              ctx.font = `${Math.round(px(tSize))}px Inter, sans-serif`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "bottom";
+              ctx.fillText(el.content, 0, px(h / 2));
+            } catch (e) {}
+          } else if (el.type === "image") {
+            const cachedImg = imagesCache[el.content];
+            if (cachedImg) {
+              ctx.imageSmoothingEnabled = false;
+              ctx.drawImage(cachedImg, px(-w / 2), px(-h / 2), px(w), px(h));
+              ctx.imageSmoothingEnabled = true;
+            }
+          } else if (el.type === "line") {
+            ctx.beginPath();
+            ctx.moveTo(px(-w / 2), 0);
+            ctx.lineTo(px(w / 2), 0);
 
-          // Apply line style (dash pattern)
-          const dashArray = el.strokeDasharray || el.lineDash;
-          if (dashArray && Array.isArray(dashArray) && dashArray.length >= 2) {
-            ctx.setLineDash(dashArray);
-          } else {
-            ctx.setLineDash([]);
-          }
+            // Apply line style (dash pattern)
+            const dashArray = el.strokeDasharray || el.lineDash;
+            if (
+              dashArray &&
+              Array.isArray(dashArray) &&
+              dashArray.length >= 2
+            ) {
+              ctx.setLineDash(dashArray);
+            } else {
+              ctx.setLineDash([]);
+            }
 
-          ctx.stroke();
-          ctx.setLineDash([]); // Reset
-        } else if (el.type === "rect") {
-          if (el.fill) {
-            ctx.fillRect(px(-w / 2), px(-h / 2), px(w), px(h));
-          } else {
-            ctx.strokeRect(px(-w / 2), px(-h / 2), px(w), px(h));
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset
+          } else if (el.type === "rect") {
+            if (el.fill) {
+              ctx.fillRect(px(-w / 2), px(-h / 2), px(w), px(h));
+            } else {
+              ctx.strokeRect(px(-w / 2), px(-h / 2), px(w), px(h));
+            }
           }
-        }
-        ctx.restore();
-      });
+          ctx.restore();
+        });
+      }
     }
 
     ctx.setLineDash([5, 5]);
@@ -439,10 +506,10 @@ export default function LabelPreview({
 
     // Draw selection box
     if (selectionBox && selectionBox.active) {
-      ctx.fillStyle = "rgba(0,150,218,0.12)";
+      ctx.fillStyle = "rgba(0,150,218,0.2)";
       ctx.strokeStyle = "#0096DA";
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([6, 3]);
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 4]);
 
       const rx = Math.min(selectionBox.x, selectionBox.x + selectionBox.w);
       const ry = Math.min(selectionBox.y, selectionBox.y + selectionBox.h);
@@ -465,11 +532,24 @@ export default function LabelPreview({
       ctx.fillRect(px(rx), px(ry), px(rw), px(rh));
       ctx.setLineDash([4, 4]);
       ctx.strokeStyle = "#0096DA";
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 4;
       ctx.strokeRect(px(rx), px(ry), px(rw), px(rh));
       ctx.setLineDash([]);
     }
-  }, [data, width, height, dpi, guides, editingId, selectedId, imagesCache, drawingRect, columns, gap, selectionBox]);
+  }, [
+    data,
+    width,
+    height,
+    dpi,
+    guides,
+    editingId,
+    selectedId,
+    imagesCache,
+    drawingRect,
+    columns,
+    gap,
+    selectionBox,
+  ]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button === 2) return;
@@ -487,73 +567,15 @@ export default function LabelPreview({
       return;
     }
 
-    // Click-and-drag selection (no shift key)
-    if (!e.shiftKey && !rotatingId.current && !resizingId.current && !draggingId.current) {
-      selectionStart.current = { x: mmX, y: mmY };
-      setSelectionBox({ x: mmX, y: mmY, w: 0, h: 0, active: true });
-      selecting.current = true;
-
-      // Check if clicking on an element
-      const elements = data.custom[data.activeTab] || [];
-      for (let i = elements.length - 1; i >= 0; i--) {
-        const el = elements[i];
-        const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
-        const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
-        const isInsideX = el.type === "text"
-          ? mmX >= el.x - w / 2 && mmX <= el.x + w / 2
-          : mmX >= el.x && mmX <= el.x + w;
-        const isInsideY = el.type === "text"
-          ? mmY >= el.y - h / 2 && mmY <= el.y + h / 2
-          : mmY >= el.y && mmY <= el.y + h;
-
-        if (isInsideX && isInsideY) {
-          onSelectElement?.(el.id);
-          draggingId.current = el.id;
-          dragStart.current = { x: mmX, y: mmY, elX: el.x, elY: el.y };
-          setSelectionBox(null);
-          selecting.current = false;
-          return;
-        }
-      }
-      onSelectElement?.(null);
-      return;
-    }
-
-    // Shift-click for multi-selection
-    if (e.shiftKey) {
-      const elements = data.custom[data.activeTab] || [];
-      for (let i = elements.length - 1; i >= 0; i--) {
-        const el = elements[i];
-        const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
-        const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
-        const isInsideX = el.type === "text"
-          ? mmX >= el.x - w / 2 && mmX <= el.x + w / 2
-          : mmX >= el.x && mmX <= el.x + w;
-        const isInsideY = el.type === "text"
-          ? mmY >= el.y - h / 2 && mmY <= el.y + h / 2
-          : mmY >= el.y && mmY <= el.y + h;
-
-        if (isInsideX && isInsideY) {
-          const newSet = new Set(selectedIds);
-          if (newSet.has(el.id)) {
-            newSet.delete(el.id);
-          } else {
-            newSet.add(el.id);
-          }
-          setSelectedIds(newSet);
-          onSelectElement?.(newSet.size > 0 ? Array.from(newSet)[newSet.size - 1] : null);
-          return;
-        }
-      }
-      return;
-    }
-
-    // Check special element handles (rotate, resize, delete)
+    // PRIORIDADE 1: Verificar handles especiais (resize, rotate, delete) PRIMEIRO
     if (selectedId) {
       const elements = data.custom[data.activeTab] || [];
-      const el = elements.find(item => item.id === selectedId);
+      const el = elements.find((item) => item.id === selectedId);
       if (el) {
-        const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
+        const w =
+          el.type === "text"
+            ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55)
+            : el.w || 20;
         const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
         const cx = el.type === "text" ? el.x : el.x + w / 2;
         const cy = el.type === "text" ? el.y : el.y + h / 2;
@@ -563,21 +585,34 @@ export default function LabelPreview({
         const localX = dx * Math.cos(-rad) - dy * Math.sin(-rad);
         const localY = dx * Math.sin(-rad) + dy * Math.cos(-rad);
         const h_mm = (20 * 25.4) / dpi;
+        const threshold = 3; // mm
 
-        if (Math.abs(localX - 0) < 5 && Math.abs(localY - (-h / 2 - h_mm)) < 5) {
+        // Check rotate handle
+        if (
+          Math.abs(localX - 0) < threshold &&
+          Math.abs(localY - (-h / 2 - h_mm)) < threshold
+        ) {
           rotatingId.current = el.id;
           rotateStart.current = { cx, cy };
           return;
         }
 
+        // Check delete handle
         const delLX = w / 2 + (4 * 25.4) / dpi;
         const delLY = -h / 2 - (4 * 25.4) / dpi;
-        if (Math.abs(localX - delLX) < 5 && Math.abs(localY - delLY) < 5) {
+        if (
+          Math.abs(localX - delLX) < threshold &&
+          Math.abs(localY - delLY) < threshold
+        ) {
           onRemoveElement?.(el.id);
           return;
         }
 
-        if (Math.abs(localX - w / 2) < 5 && Math.abs(localY - h / 2) < 5) {
+        // Check resize handle
+        if (
+          Math.abs(localX - w / 2) < threshold &&
+          Math.abs(localY - h / 2) < threshold
+        ) {
           resizingId.current = el.id;
           resizeStart.current = { mmX, mmY, w, h, fontSize: el.fontSize || 4 };
           return;
@@ -585,44 +620,94 @@ export default function LabelPreview({
       }
     }
 
-    // Normal element selection (single click)
+    // PRIORIDADE 2: Verificar se clicou em um elemento
     const elements = data.custom[data.activeTab] || [];
-    let hit = false;
+    let clickedElement: any = null;
     for (let i = elements.length - 1; i >= 0; i--) {
       const el = elements[i];
-      const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
+      const w =
+        el.type === "text"
+          ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55)
+          : el.w || 20;
       const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
-      const isInsideX = el.type === "text"
-        ? mmX >= el.x - w / 2 && mmX <= el.x + w / 2
-        : mmX >= el.x && mmX <= el.x + w;
-      const isInsideY = el.type === "text"
-        ? mmY >= el.y - h / 2 && mmY <= el.y + h / 2
-        : mmY >= el.y && mmY <= el.y + h;
+      const isInsideX =
+        el.type === "text"
+          ? mmX >= el.x - w / 2 && mmX <= el.x + w / 2
+          : mmX >= el.x && mmX <= el.x + w;
+      const isInsideY =
+        el.type === "text"
+          ? mmY >= el.y - h / 2 && mmY <= el.y + h / 2
+          : mmY >= el.y && mmY <= el.y + h;
 
       if (isInsideX && isInsideY) {
-        onSelectElement?.(el.id);
-        draggingId.current = el.id;
-        dragStart.current = { x: mmX, y: mmY, elX: el.x, elY: el.y };
-        hit = true;
+        clickedElement = el;
         break;
       }
     }
-    if (!hit) onSelectElement?.(null);
+
+    // Se clicou em um elemento
+    if (clickedElement) {
+      if (e.shiftKey) {
+        const newSet = new Set(selectedIds);
+        if (newSet.has(clickedElement.id)) {
+          newSet.delete(clickedElement.id);
+        } else {
+          newSet.add(clickedElement.id);
+        }
+        onSelectMultiple?.(newSet);
+        return;
+      }
+
+      if (!selectedIds.has(clickedElement.id)) {
+        onSelectMultiple?.(new Set([clickedElement.id]));
+        onSelectElement?.(clickedElement.id);
+      }
+
+      draggingId.current = clickedElement.id;
+      dragStart.current = {
+        x: mmX,
+        y: mmY,
+        elX: clickedElement.x,
+        elY: clickedElement.y,
+      };
+
+      selectionStart.current = null;
+      selecting.current = false;
+      setSelectionBox(null);
+      return;
+    }
+
+    // PRIORIDADE 3: Click em área vazia - inicia seleção múltipla com box
+    onSelectMultiple?.(new Set());
+    onSelectElement?.(null);
+    selectionStart.current = { x: mmX, y: mmY };
+    setSelectionBox({ x: mmX, y: mmY, w: 0, h: 0, active: true });
+    selecting.current = true;
   };
 
-  const isInSelectionBox = (elX: number, elY: number, elW: number, elH: number, type: string) => {
+  const isInSelectionBox = (
+    elX: number,
+    elY: number,
+    elW: number,
+    elH: number,
+    type: string,
+  ) => {
     if (!selectionBox || !selectionBox.active) return false;
-    const boxX = Math.min(selectionBox.x, selectionBox.x + selectionBox.w);
-    const boxY = Math.min(selectionBox.y, selectionBox.y + selectionBox.h);
-    const boxW = Math.abs(selectionBox.w);
-    const boxH = Math.abs(selectionBox.h);
 
-    // Check if element center is inside selection box
-    const elCenterX = type === "text" ? elX : elX + elW / 2;
-    const elCenterY = type === "text" ? elY : elY + elH / 2;
+    // Calcula os limites do box de seleção
+    const boxX1 = Math.min(selectionBox.x, selectionBox.x + selectionBox.w);
+    const boxY1 = Math.min(selectionBox.y, selectionBox.y + selectionBox.h);
+    const boxX2 = Math.max(selectionBox.x, selectionBox.x + selectionBox.w);
+    const boxY2 = Math.max(selectionBox.y, selectionBox.y + selectionBox.h);
 
-    return elCenterX >= boxX && elCenterX <= boxX + boxW &&
-           elCenterY >= boxY && elCenterY <= boxY + boxH;
+    // Calcula os limites do elemento
+    const elX1 = type === "text" ? elX - elW / 2 : elX;
+    const elY1 = type === "text" ? elY - elH / 2 : elY;
+    const elX2 = type === "text" ? elX + elW / 2 : elX + elW;
+    const elY2 = type === "text" ? elY + elH / 2 : elY + elH;
+
+    // Verifica se há interseção entre o box e o elemento
+    return elX2 >= boxX1 && elX1 <= boxX2 && elY2 >= boxY1 && elY1 <= boxY2;
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -648,7 +733,12 @@ export default function LabelPreview({
     }
 
     if (drawStart.current) {
-      setDrawingRect({ x1: drawStart.current.x, y1: drawStart.current.y, x2: mmX, y2: mmY });
+      setDrawingRect({
+        x1: drawStart.current.x,
+        y1: drawStart.current.y,
+        x2: mmX,
+        y2: mmY,
+      });
       return;
     }
     if (rotatingId.current && onUpdateElement) {
@@ -666,24 +756,46 @@ export default function LabelPreview({
       if (el) {
         let newW = resizeStart.current.w + dx;
         let newH = resizeStart.current.h + dy;
-        if (e.shiftKey) {
-          const ratio = resizeStart.current.w / resizeStart.current.h;
-          newW = newH * ratio;
+
+        // Mantém proporção por padrão ("como um todo sempre")
+        // Se for imagem, a proporção é sempre 1:1
+        // Se for outros elementos, mantém a proporção original a menos que Shift seja pressionado (invertendo o comportamento padrão)
+        const maintainRatio = el.type === "image" || !e.shiftKey;
+
+        if (maintainRatio) {
+          const ratio =
+            el.type === "image"
+              ? 1
+              : resizeStart.current.w / resizeStart.current.h || 1;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            newH = newW / ratio;
+          } else {
+            newW = newH * ratio;
+          }
         }
+
         onUpdateElement(el.id, {
-          w: Math.max(5, newW),
-          h: Math.max(2, newH),
+          w: Math.max(el.type === "line" ? 1 : 5, newW),
+          h: Math.max(el.type === "line" ? 1 : 2, newH),
         });
       }
       return;
     }
     // Hover handle detection (only when idle)
-    if (!draggingId.current && !resizingId.current && !rotatingId.current && selectedId) {
+    if (
+      !draggingId.current &&
+      !resizingId.current &&
+      !rotatingId.current &&
+      selectedId
+    ) {
       const elements = data.custom[data.activeTab] || [];
       const el = elements.find((item) => item.id === selectedId);
       let next: typeof hoverHandle = null;
       if (el) {
-        const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
+        const w =
+          el.type === "text"
+            ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55)
+            : el.w || 20;
         const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
         const ecx = el.type === "text" ? el.x : el.x + w / 2;
         const ecy = el.type === "text" ? el.y : el.y + h / 2;
@@ -707,7 +819,8 @@ export default function LabelPreview({
         if (Math.hypot(lx - rotLX, ly - rotLY) < r) next = "rotate";
         else if (Math.hypot(lx - delLX, ly - delLY) < r) next = "delete";
         else if (Math.hypot(lx - resLX, ly - resLY) < r) next = "resize";
-        else if (lx >= rx && lx <= rx + w && ly >= ry && ly <= ry + h) next = "move";
+        else if (lx >= rx && lx <= rx + w && ly >= ry && ly <= ry + h)
+          next = "move";
       }
       if (next !== hoverHandle) setHoverHandle(next);
     } else if (!selectedId && hoverHandle !== null) {
@@ -727,14 +840,17 @@ export default function LabelPreview({
     );
     const g: { x?: number; y?: number } = {};
     if (el) {
-      const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
+      const w =
+        el.type === "text"
+          ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55)
+          : el.w || 20;
       const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
       const ecx = el.type === "text" ? fx : fx + w / 2;
       const ecy = el.type === "text" ? fy : fy + h / 2;
 
       if (Math.abs(ecx - cx) < snap) {
-         fx = el.type === "text" ? cx : cx - w / 2;
-         g.x = cx;
+        fx = el.type === "text" ? cx : cx - w / 2;
+        g.x = cx;
       }
 
       if (Math.abs(ecy - cy) < snap) {
@@ -743,10 +859,33 @@ export default function LabelPreview({
       }
     }
     setGuides(g);
-    onUpdateElement(draggingId.current, {
-      x: Math.round(fx),
-      y: Math.round(fy),
-    });
+
+    // Mover tudo que está selecionado
+    if (selectedIds.has(draggingId.current)) {
+      selectedIds.forEach((id) => {
+        const targetEl = data.custom[data.activeTab]?.find(
+          (it) => it.id === id,
+        );
+        if (targetEl) {
+          const offsetX =
+            targetEl.id === draggingId.current ? fx : targetEl.x + dx;
+          const offsetY =
+            targetEl.id === draggingId.current ? fy : targetEl.y + dy;
+          onUpdateElement(targetEl.id, {
+            x: Math.round(offsetX),
+            y: Math.round(offsetY),
+          });
+        }
+      });
+      // Importante: atualizar o ponto inicial do arraste para o próximo frame
+      dragStart.current.x = mmX;
+      dragStart.current.y = mmY;
+    } else {
+      onUpdateElement(draggingId.current, {
+        x: Math.round(fx),
+        y: Math.round(fy),
+      });
+    }
   };
 
   const handleMouseUp = () => {
@@ -756,28 +895,24 @@ export default function LabelPreview({
       const box = selectionBox;
 
       // Apply selection if box is large enough
-      if (box && box.active) {
+      if (box && box.active && (Math.abs(box.w) > 1 || Math.abs(box.h) > 1)) {
         const elements = data.custom[data.activeTab] || [];
         const newSet = new Set<string>();
 
         elements.forEach((el) => {
-          const w = el.type === "text" ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55) : el.w || 20;
-          const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
+          const w =
+            el.type === "text"
+              ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55)
+              : el.w || 20;
+          const h =
+            el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
           if (isInSelectionBox(el.x, el.y, w, h, el.type)) {
             newSet.add(el.id);
           }
         });
 
         if (newSet.size > 0) {
-          // Add to existing selection if shift is held, otherwise replace
-          const wasMultiSelect = selectedIds.size > 1;
-          if (wasMultiSelect) {
-            setSelectedIds(newSet);
-            onSelectElement?.(Array.from(newSet)[newSet.size - 1]);
-          } else {
-            setSelectedIds(newSet);
-            onSelectElement?.(Array.from(newSet)[newSet.size - 1]);
-          }
+          onSelectMultiple?.(newSet);
         }
       }
 
@@ -857,8 +992,12 @@ export default function LabelPreview({
           const el = [...(data.custom[data.activeTab] || [])]
             .reverse()
             .find((it) => {
-              const w = it.type === "text" ? (it.w ?? it.content.length * (it.fontSize || 4) * 0.55) : it.w || 20;
-              const h = it.type === "text" ? (it.h ?? it.fontSize ?? 4) : it.h || 10;
+              const w =
+                it.type === "text"
+                  ? (it.w ?? it.content.length * (it.fontSize || 4) * 0.55)
+                  : it.w || 20;
+              const h =
+                it.type === "text" ? (it.h ?? it.fontSize ?? 4) : it.h || 10;
               return it.type === "text"
                 ? mmX >= it.x - w / 2 &&
                     mmX <= it.x + w / 2 &&
@@ -898,45 +1037,51 @@ export default function LabelPreview({
         }}
         className="max-w-full h-auto rounded border border-slate-300 bg-white shadow-2xl"
       />
-      {editingId && (() => {
-        const el = data.custom[data.activeTab]?.find((e) => e.id === editingId);
-        if (!el) return null;
-        const elW = el.w ?? el.content.length * (el.fontSize || 4) * 0.55;
-        const elH = el.h ?? (el.fontSize || 4);
-        const scale = (canvasRef.current?.getBoundingClientRect().width || 1) / (canvasRef.current?.width || 1);
-        return (
-          <textarea
-            autoFocus
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            onBlur={() => {
-              if (editingId) onUpdateElement?.(editingId, { content: editValue });
-              setEditingId(null);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                onUpdateElement?.(editingId, { content: editValue });
+      {editingId &&
+        (() => {
+          const el = data.custom[data.activeTab]?.find(
+            (e) => e.id === editingId,
+          );
+          if (!el) return null;
+          const elW = el.w ?? el.content.length * (el.fontSize || 4) * 0.55;
+          const elH = el.h ?? (el.fontSize || 4);
+          const scale =
+            (canvasRef.current?.getBoundingClientRect().width || 1) /
+            (canvasRef.current?.width || 1);
+          return (
+            <textarea
+              autoFocus
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={() => {
+                if (editingId)
+                  onUpdateElement?.(editingId, { content: editValue });
                 setEditingId(null);
-              }
-            }}
-            className="absolute bg-white border-2 border-accent rounded p-0 m-0 outline-none text-black resize-none overflow-hidden"
-            style={{
-              left: `${((el.x - elW / 2) / width) * 100}%`,
-              top: `${((el.y - elH / 2) / height) * 100}%`,
-              width: `${(elW / width) * 100}%`,
-              height: `${(elH / height) * 100}%`,
-              fontSize: `${px(el.fontSize || 4) * scale}px`,
-              lineHeight: 1.2,
-              fontFamily: `${el.fontFamily || "Inter"}, sans-serif`,
-              fontWeight: el.bold ? "bold" : "normal",
-              fontStyle: el.italic ? "italic" : "normal",
-              textAlign: el.align || "center",
-              paddingTop: `${Math.max(0, (elH * scale * (dpi / 25.4) - (el.fontSize || 4) * scale * (dpi / 25.4) * 1.2) / 2)}px`,
-              boxSizing: "border-box"
-            }}
-          />
-        );
-      })()}
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  onUpdateElement?.(editingId, { content: editValue });
+                  setEditingId(null);
+                }
+              }}
+              className="absolute bg-white border-2 border-accent rounded p-0 m-0 outline-none text-black resize-none overflow-hidden"
+              style={{
+                left: `${((el.x - elW / 2) / width) * 100}%`,
+                top: `${((el.y - elH / 2) / height) * 100}%`,
+                width: `${(elW / width) * 100}%`,
+                height: `${(elH / height) * 100}%`,
+                fontSize: `${px(el.fontSize || 4) * scale}px`,
+                lineHeight: 1.2,
+                fontFamily: `${el.fontFamily || "Inter"}, sans-serif`,
+                fontWeight: el.bold ? "bold" : "normal",
+                fontStyle: el.italic ? "italic" : "normal",
+                textAlign: el.align || "center",
+                paddingTop: `${Math.max(0, (elH * scale * (dpi / 25.4) - (el.fontSize || 4) * scale * (dpi / 25.4) * 1.2) / 2)}px`,
+                boxSizing: "border-box",
+              }}
+            />
+          );
+        })()}
       {contextMenu.visible && (
         <div
           className="fixed z-[100] bg-slate-900/90 backdrop-blur-xl border border-white/20 rounded-xl py-2 shadow-2xl min-w-[120px]"

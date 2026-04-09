@@ -17,10 +17,11 @@ import {
   Wine,
   MoveUp,
   Umbrella,
-  Package,
+  Box,
+  Building2,
+  Tag,
   Columns,
   Square as SquareIcon,
-  Pencil,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -46,100 +47,144 @@ import { canvasToMonoBitmap, generateTSPL } from "./tspl";
 import daniloImg from "./danilo.png";
 import appIcon from "./assets/icon.png";
 
-
-
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "editor", label: "Editor", icon: PenTool },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
-const svgToDataUrl = (svg: string) =>
-  `data:image/svg+xml;base64,${btoa(svg)}`;
+const svgToDataUrl = (svg: string) => `data:image/svg+xml;base64,${btoa(svg)}`;
 
 const S = `viewBox="0 0 64 64" fill="none" stroke="black" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"`;
-const svg = (body: string) => svgToDataUrl(`<svg xmlns="http://www.w3.org/2000/svg" ${S}>${body}</svg>`);
+const svg = (body: string) =>
+  svgToDataUrl(`<svg xmlns="http://www.w3.org/2000/svg" ${S}>${body}</svg>`);
 
 const LOGISTICS_ICONS = [
   {
     name: "Fragil",
     icon: <Wine size={16} />,
-    data: svg(`<path d="M20 8h24l-4 20c-1 5 2 10 2 10H22s3-5 2-10Z"/><line x1="32" y1="38" x2="32" y2="54"/><line x1="22" y1="54" x2="42" y2="54"/>`),
+    data: svg(
+      `<path d="M20 8h24l-4 20c-1 5 2 10 2 10H22s3-5 2-10Z"/><line x1="32" y1="38" x2="32" y2="54"/><line x1="22" y1="54" x2="42" y2="54"/>`,
+    ),
   },
   {
     name: "Cima",
     icon: <MoveUp size={16} />,
-    data: svg(`<rect x="8" y="34" width="48" height="22" rx="2"/><line x1="20" y1="34" x2="20" y2="14"/><polyline points="12,22 20,14 28,22"/><line x1="44" y1="34" x2="44" y2="14"/><polyline points="36,22 44,14 52,22"/>`),
+    data: svg(
+      `<line x1="12" y1="54" x2="52" y2="54" stroke-width="6"/><path d="M32 44 V10 M18 24 L32 10 L46 24" stroke-width="6"/>`,
+    ),
   },
   {
     name: "Seco",
     icon: <Umbrella size={16} />,
-    data: svg(`<path d="M8 30C8 17.8 19 8 32 8s24 9.8 24 22H8z"/><line x1="32" y1="30" x2="32" y2="48"/><path d="M32 48c0 3.3-2.7 6-6 6s-6-2.7-6-6"/><line x1="14" y1="44" x2="14" y2="52"/><line x1="22" y1="40" x2="22" y2="48"/><line x1="42" y1="40" x2="42" y2="48"/><line x1="50" y1="44" x2="50" y2="52"/>`),
+    data: svg(
+      `<path d="M8 30C8 17.8 19 8 32 8s24 9.8 24 22H8z"/><line x1="32" y1="30" x2="32" y2="48"/><path d="M32 48c0 3.3-2.7 6-6 6s-6-2.7-6-6"/><line x1="14" y1="44" x2="14" y2="52"/><line x1="22" y1="40" x2="22" y2="48"/><line x1="42" y1="40" x2="42" y2="48"/><line x1="50" y1="44" x2="50" y2="52"/>`,
+    ),
   },
   {
     name: "Caixa",
-    icon: <Package size={16} />,
-    data: svg(`<polygon points="32,6 58,20 58,48 32,62 6,48 6,20"/><line x1="32" y1="6" x2="32" y2="34"/><line x1="6" y1="20" x2="32" y2="34"/><line x1="58" y1="20" x2="32" y2="34"/>`),
+    icon: <Box size={16} />,
+    data: svg(
+      `<path d="M32 10 L12 20 L32 30 L52 20 Z"/><path d="M12 20 V44 L32 54 V30"/><path d="M52 20 V44 L32 54"/>`,
+    ),
   },
   {
     name: "Rastrear",
     icon: <PackageSearch size={16} />,
-    data: svg(`<path d="M30 8H8v42h22"/><line x1="8" y1="8" x2="24" y2="18"/><line x1="24" y1="8" x2="24" y2="50"/><circle cx="44" cy="42" r="12"/><line x1="52" y1="50" x2="60" y2="58"/>`),
+    data: svg(
+      `<path d="M8 22 L28 12 L48 22 V42 L28 52 L8 42 Z M8 22 L28 32 L48 22 M28 32 V52"/><circle cx="48" cy="48" r="12" fill="none" stroke="black" stroke-width="4"/><line x1="56" y1="56" x2="62" y2="62" stroke-width="6"/>`,
+    ),
   },
   {
     name: "Balanca",
     icon: <Scale size={16} />,
-    data: svg(`<line x1="32" y1="8" x2="32" y2="56"/><line x1="18" y1="56" x2="46" y2="56"/><line x1="6" y1="22" x2="58" y2="22"/><path d="M6 22l-4 14h16Z"/><path d="M58 22l-4 14h16Z"/><circle cx="32" cy="10" r="4"/>`),
+    data: svg(
+      `<path d="M32 10 V54 M10 54 H54 M10 24 H54"/><path d="M10 24 L2 40 H18 Z"/><path d="M54 24 L46 40 H62 Z"/>`,
+    ),
   },
   {
     name: "Caminhao",
     icon: <Truck size={16} />,
-    data: svg(`<rect x="4" y="18" width="36" height="30" rx="2"/><path d="M40 28h12l8 14v8H40z"/><circle cx="14" cy="52" r="6"/><circle cx="50" cy="52" r="6"/><line x1="4" y1="46" x2="60" y2="46"/>`),
+    data: svg(
+      `<rect x="4" y="18" width="36" height="30" rx="2"/><path d="M40 28h12l8 14v8H40z"/><circle cx="14" cy="52" r="6"/><circle cx="50" cy="52" r="6"/><line x1="4" y1="46" x2="60" y2="46"/>`,
+    ),
   },
   {
     name: "Aviao",
     icon: <Plane size={16} />,
-    data: svg(`<path d="M58 30L34 8l-6 6 10 14H8l-2 6 28 6v14l-8 2 2 4 10-4 10 4 2-4-8-2V40l28-6z"/>`),
+    data: svg(
+      `<path d="M32 4 L26 14 L4 34 V42 L26 34 V52 L18 60 H46 L38 52 V34 L60 42 V34 L38 14 Z" fill="none" stroke="black" stroke-width="3"/>`,
+    ),
   },
   {
     name: "Navio",
     icon: <Ship size={16} />,
-    data: svg(`<path d="M8 38l4 12h40l4-12z"/><rect x="16" y="22" width="32" height="16"/><rect x="24" y="10" width="16" height="12"/><line x1="32" y1="10" x2="32" y2="4"/><line x1="4" y1="50" x2="60" y2="50"/>`),
+    data: svg(
+      `<path d="M4 44 L12 56 H52 L60 44 Z"/><rect x="16" y="32" width="8" height="12"/><rect x="28" y="32" width="8" height="12"/><path d="M42 24 V44 H54 V30 Z"/>`,
+    ),
   },
   {
     name: "Global",
     icon: <Globe size={16} />,
-    data: svg(`<circle cx="32" cy="32" r="26"/><path d="M32 6c-8 6-14 15-14 26s6 20 14 26"/><path d="M32 6c8 6 14 15 14 26s-6 20-14 26"/><line x1="6" y1="32" x2="58" y2="32"/><line x1="10" y1="20" x2="54" y2="20"/><line x1="10" y1="44" x2="54" y2="44"/>`),
+    data: svg(
+      `<circle cx="32" cy="32" r="26"/><path d="M32 6c-8 6-14 15-14 26s6 20 14 26"/><path d="M32 6c8 6 14 15 14 26s-6 20-14 26"/><line x1="6" y1="32" x2="58" y2="32"/><line x1="10" y1="20" x2="54" y2="20"/><line x1="10" y1="44" x2="54" y2="44"/>`,
+    ),
   },
   {
     name: "Checklist",
     icon: <ClipboardList size={16} />,
-    data: svg(`<rect x="10" y="8" width="44" height="50" rx="2"/><rect x="22" y="4" width="20" height="8" rx="2"/><polyline points="14,28 19,34 26,24"/><line x1="30" y1="28" x2="48" y2="28"/><polyline points="14,42 19,48 26,38"/><line x1="30" y1="42" x2="48" y2="42"/>`),
+    data: svg(
+      `<rect x="10" y="8" width="44" height="50" rx="2"/><rect x="22" y="4" width="20" height="8" rx="2"/><polyline points="14,28 19,34 26,24"/><line x1="30" y1="28" x2="48" y2="28"/><polyline points="14,42 19,48 26,38"/><line x1="30" y1="42" x2="48" y2="42"/>`,
+    ),
   },
   {
     name: "Agenda",
     icon: <CalendarCheck size={16} />,
-    data: svg(`<rect x="6" y="10" width="52" height="48" rx="2"/><line x1="6" y1="26" x2="58" y2="26"/><line x1="20" y1="4" x2="20" y2="16"/><line x1="44" y1="4" x2="44" y2="16"/><polyline points="22,42 28,48 42,36"/>`),
+    data: svg(
+      `<rect x="6" y="10" width="52" height="48" rx="2"/><line x1="6" y1="26" x2="58" y2="26"/><line x1="20" y1="4" x2="20" y2="16"/><line x1="44" y1="4" x2="44" y2="16"/><polyline points="22,42 28,48 42,36"/>`,
+    ),
   },
   {
     name: "Suporte",
     icon: <Headphones size={16} />,
-    data: svg(`<path d="M10 32C10 19.9 19.9 10 32 10s22 9.9 22 22"/><rect x="6" y="32" width="10" height="16" rx="4"/><rect x="48" y="32" width="10" height="16" rx="4"/><path d="M54 48v4a8 8 0 0 1-8 8H32"/><circle cx="32" cy="60" r="3"/>`),
+    data: svg(
+      `<path d="M10 32C10 19.9 19.9 10 32 10s22 9.9 22 22"/><rect x="6" y="32" width="10" height="16" rx="4"/><rect x="48" y="32" width="10" height="16" rx="4"/><path d="M54 48v4a8 8 0 0 1-8 8H32"/><circle cx="32" cy="60" r="3"/>`,
+    ),
   },
   {
     name: "Prazo",
     icon: <Timer size={16} />,
-    data: svg(`<circle cx="32" cy="38" r="22"/><line x1="32" y1="38" x2="32" y2="24"/><line x1="32" y1="38" x2="44" y2="32"/><line x1="26" y1="8" x2="38" y2="8"/><line x1="56" y1="16" x2="52" y2="20"/>`),
+    data: svg(
+      `<circle cx="32" cy="38" r="22"/><line x1="32" y1="38" x2="32" y2="24"/><line x1="32" y1="38" x2="44" y2="32"/><line x1="26" y1="8" x2="38" y2="8"/><line x1="56" y1="16" x2="52" y2="20"/>`,
+    ),
   },
   {
     name: "24h",
     icon: <Clock size={16} />,
-    data: svg(`<circle cx="32" cy="32" r="26"/><line x1="32" y1="18" x2="32" y2="32"/><line x1="32" y1="32" x2="46" y2="40"/>`),
+    data: svg(
+      `<circle cx="32" cy="32" r="26"/><line x1="32" y1="18" x2="32" y2="32"/><line x1="32" y1="32" x2="46" y2="40"/>`,
+    ),
   },
   {
     name: "Telefone",
     icon: <Phone size={16} />,
-    data: svg(`<path d="M14 8h12l4 12-8 4c2 8 8 14 16 16l4-8 12 4v12c0 2-2 4-4 4C22 52 12 30 14 8z"/>`),
+    data: svg(
+      `<path d="M14 8h12l4 12-8 4c2 8 8 14 16 16l4-8 12 4v12c0 2-2 4-4 4C22 52 12 30 14 8z"/>`,
+    ),
+  },
+  {
+    name: "Empresa",
+    icon: <Building2 size={16} />,
+    data: svg(
+      `<path d="M10 56 V12 H54 V56 M10 24 H54 M10 36 H54 M10 48 H54 M32 12 V56"/>`,
+    ),
+  },
+  {
+    name: "Marca",
+    icon: <Tag size={16} />,
+    data: svg(
+      `<path d="M12 10 H36 L54 28 L36 46 H12 Z"/><circle cx="22" cy="18" r="4" fill="none" stroke="black" stroke-width="4"/>`,
+    ),
   },
 ];
 
@@ -166,42 +211,41 @@ const DEFAULT_TEMPLATES: Template[] = [
         id: "p1",
         type: "text",
         x: 50,
-        y: 10,
-        content: "NOME DO PRODUTO",
+        y: 9,
+        content: "DESCRIÇÃO DO PRODUTO",
+        w: 97.57379726095893,
+        h: 17.039075193044308,
         fontSize: 7,
-        bold: true,
+        bold: false,
         align: "center",
+        fontFamily: "Impact",
         fieldBinding: "ITE_DESITE",
-      },
-      {
-        id: "p2",
-        type: "text",
-        x: 50,
-        y: 18,
-        content: "(00000) MARCA",
-        fontSize: 5,
-        align: "center",
-        fieldBinding: "ITE_CODITE",
+        lineHeight: 1.1,
       },
       {
         id: "p3",
         type: "text",
         x: 50,
-        y: 28,
-        content: "00000",
-        fontSize: 10,
-        bold: true,
+        y: 21,
+        content: "CODIGO",
+        w: 28.5609111368083,
+        h: 7.418294799710182,
+        fontSize: 7,
+        bold: false,
         align: "center",
+        fieldBinding: "ITE_CODITE",
       },
       {
         id: "p4",
         type: "barcode",
-        x: 50,
-        y: 40,
-        content: "7890000000000",
-        w: 70,
-        h: 12,
+        x: 13,
+        y: 27,
+        content: "7891960280044",
+        w: 80.08168209872301,
+        h: 19.73845379463832,
         fieldBinding: "ITE_CODBAR",
+        bcFormat: "EAN13",
+        bcLabelDist: -0.6,
       },
     ],
   },
@@ -214,45 +258,99 @@ const DEFAULT_TEMPLATES: Template[] = [
     columns: 2,
     elements: [
       {
-        id: "pz1",
+        id: "pz3",
         type: "text",
         x: 25,
-        y: 5,
-        content: "NOME DO PRODUTO",
-        fontSize: 4,
+        y: 13,
+        content: "CODIGO",
+        fontSize: 4.5,
         bold: true,
-        align: "center",
-        fieldBinding: "ITE_DESITE",
-      },
-      {
-        id: "pz2",
-        type: "text",
-        x: 25,
-        y: 10,
-        content: "(00000) MARCA",
-        fontSize: 3.5,
         align: "center",
         fieldBinding: "ITE_CODITE",
       },
       {
-        id: "pz3",
-        type: "text",
-        x: 25,
-        y: 18,
-        content: "00000",
-        fontSize: 7,
-        bold: true,
-        align: "center",
-      },
-      {
         id: "pz4",
         type: "barcode",
-        x: 25,
-        y: 26,
-        content: "7890000000000",
-        w: 35,
-        h: 7,
+        x: 1,
+        y: 16,
+        content: "7891960819954",
+        w: 48.57040158225125,
+        h: 11.591137092982848,
         fieldBinding: "ITE_CODBAR",
+        bcFontSize: 2.4,
+        bcLabelDist: 0,
+      },
+      {
+        id: "qdohddb",
+        type: "text",
+        x: 25,
+        y: 5,
+        content: "CODIGO DO PRODUTO",
+        w: 44,
+        h: 7,
+        fontSize: 4,
+        align: "center",
+        fontFamily: "Impact",
+        fieldBinding: "ITE_DESITE",
+        rotation: 0,
+      },
+    ],
+  },
+  {
+    id: "despacho",
+    label: "Despacho",
+    size: "100x50mm",
+    w: 100,
+    h: 50,
+    columns: 1,
+    elements: [
+      {
+        id: "d2",
+        type: "text",
+        x: 50,
+        y: 8,
+        content: "Pedido: 000001061732",
+        fontSize: 6,
+        bold: true,
+        align: "center",
+        fieldBinding: "FGO_NUMDOC",
+      },
+      {
+        id: "d3",
+        type: "text",
+        x: 50,
+        y: 22,
+        content: "Cliente: THYSSENKRUPP MET. CAMPO LIMPO LTDA",
+        w: 84.85442804798005,
+        h: 18.176286190870652,
+        fontSize: 5,
+        bold: true,
+        align: "center",
+        fieldBinding: "CLI_NOMCLI",
+      },
+      {
+        id: "d4",
+        type: "text",
+        x: 7,
+        y: 35,
+        content: "Conferente: ",
+        w: 86.97900623691277,
+        h: 12.32015899492815,
+        fontSize: 5,
+        bold: true,
+        align: "left",
+        fieldBinding: "NOME_CONFERENTE",
+      },
+      {
+        id: "d5",
+        type: "text",
+        x: 50,
+        y: 44,
+        content: "Volumes: 0",
+        fontSize: 5,
+        bold: true,
+        align: "center",
+        fieldBinding: "VOLUMES",
       },
     ],
   },
@@ -276,19 +374,7 @@ export default function App() {
   });
 
   const [templatesList, setTemplatesList] = useState<Template[]>(() => {
-    const saved = localStorage.getItem("donly_templates");
-    // Só carrega do localStorage se já existir algo salvo (usuário já usou o app)
-    // Se for primeira instalação, usa os templates padrão
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      } catch (e) {
-        console.error("Erro ao parsear templates salvos:", e);
-      }
-    }
+    // Sempre usa os templates default para garantir que funcionem corretamente
     return DEFAULT_TEMPLATES;
   });
 
@@ -318,7 +404,7 @@ export default function App() {
   const [copies, setCopies] = useState(
     () => Number(localStorage.getItem("donly_copies")) || 1,
   );
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showFontMenu, setShowFontMenu] = useState(false);
 
   const fonts = [
@@ -337,9 +423,21 @@ export default function App() {
   const [produtos, setProdutos] = useState<any[]>([]);
   const [buscaCodigo, setBuscaCodigo] = useState("");
   const [produtoEncontrado, setProdutoEncontrado] = useState<any>(null);
+  const [buscaPedido, setBuscaPedido] = useState("");
+  const [dadosDespacho, setDadosDespacho] = useState<any>(null);
+  const [loadingDespacho, setLoadingDespacho] = useState(false);
+  const [volumes, setVolumes] = useState("1");
   const [printQueue, setPrintQueue] = useState<any[]>([]);
   const [remoteQueue, setRemoteQueue] = useState<any[]>([]);
   const [localIp, setLocalIp] = useState("");
+
+  const getDefaultCustomData = (): Record<string, LabelElement[]> => {
+    const customData: Record<string, LabelElement[]> = {};
+    DEFAULT_TEMPLATES.forEach((t) => {
+      customData[t.id] = JSON.parse(JSON.stringify(t.elements));
+    });
+    return customData;
+  };
 
   const [data, setData] = useState<LabelData>({
     activeTab: "padrao",
@@ -361,26 +459,31 @@ export default function App() {
       fornecedor: "AMANCO",
       barcode: "7891960280044",
     },
-    custom: {},
+    custom: getDefaultCustomData(),
   });
 
   useEffect(() => {
     const customData: Record<string, LabelElement[]> = {};
     templatesList.forEach((t) => {
-      customData[t.id] = t.elements;
+      customData[t.id] = JSON.parse(JSON.stringify(t.elements));
     });
-    setData((prev) => ({ ...prev, custom: customData }));
-    
+    setData((prev) => ({
+      ...prev,
+      custom: customData,
+      activeTab: selectedTemplate,
+    }));
+
     // Sincroniza com o servidor Rust para o Coletor
-    invoke<void>("update_templates", { json: JSON.stringify(templatesList) })
-      .catch(() => {});
-  }, [templatesList]);
+    invoke<void>("update_templates", {
+      json: JSON.stringify(templatesList),
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     invoke<string[]>("get_printers")
       .then(setPrinters)
       .catch(() => {});
-    
+
     // Busca o IP local para o QR Code de pareamento
     invoke<string>("get_local_ip")
       .then((ip) => {
@@ -411,6 +514,31 @@ export default function App() {
     const termo = buscaCodigo.trim();
     if (!termo || produtos.length === 0) {
       setProdutoEncontrado(null);
+      // Resetar o preview ao limpar o código
+      if (!termo) {
+        const defaultElements = DEFAULT_TEMPLATES.find(
+          (t) => t.id === selectedTemplate,
+        )?.elements;
+        if (defaultElements && selectedTemplate !== "despacho") {
+          setTemplatesList((prev) =>
+            prev.map((t) =>
+              t.id === selectedTemplate
+                ? {
+                    ...t,
+                    elements: JSON.parse(JSON.stringify(defaultElements)),
+                  }
+                : t,
+            ),
+          );
+          setData((prev) => ({
+            ...prev,
+            custom: {
+              ...prev.custom,
+              [selectedTemplate]: JSON.parse(JSON.stringify(defaultElements)),
+            },
+          }));
+        }
+      }
       return;
     }
     const codigoFormatado = termo.padStart(5, "0");
@@ -434,20 +562,32 @@ export default function App() {
       });
   }, [selectedTemplate]);
 
+  // Garante que selectedTemplate sempre seja um template válido do DEFAULT_TEMPLATES
+  useEffect(() => {
+    const isValidTemplate = DEFAULT_TEMPLATES.some(
+      (t) => t.id === selectedTemplate,
+    );
+    if (!isValidTemplate) {
+      setSelectedTemplate("padrao");
+    }
+  }, [selectedTemplate]);
+
   const [isCollectorOnline, setIsCollectorOnline] = useState(false);
   const collectorTimeoutRef = useRef<any>(null);
 
   useEffect(() => {
     const unlisten = listen<boolean>("collector-status", () => {
       setIsCollectorOnline(true);
-      if (collectorTimeoutRef.current) clearTimeout(collectorTimeoutRef.current);
+      if (collectorTimeoutRef.current)
+        clearTimeout(collectorTimeoutRef.current);
       collectorTimeoutRef.current = setTimeout(() => {
         setIsCollectorOnline(false);
       }, 30000); // Fica "Online" por 30s após a última atividade
     });
     return () => {
       unlisten.then((f) => f());
-      if (collectorTimeoutRef.current) clearTimeout(collectorTimeoutRef.current);
+      if (collectorTimeoutRef.current)
+        clearTimeout(collectorTimeoutRef.current);
     };
   }, []);
 
@@ -461,8 +601,9 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("donly_templates", JSON.stringify(templatesList));
     // Sincroniza com o servidor interno para o Coletor ver
-    invoke<void>("update_templates", { json: JSON.stringify(templatesList) })
-      .catch(() => {});
+    invoke<void>("update_templates", {
+      json: JSON.stringify(templatesList),
+    }).catch(() => {});
   }, [templatesList]);
 
   useEffect(() => {
@@ -477,14 +618,16 @@ export default function App() {
     const unlisten = listen<string>("remote-print", (event) => {
       const productCode = event.payload;
       console.log("Recebido do Coletor:", productCode);
-      
+
       // Busca o produto (tenta com e sem zeros à esquerda)
-      const cleanCode = productCode.replace(/^0+/, '');
+      const cleanCode = productCode.replace(/^0+/, "");
       const product = produtos.find((p) => {
-        const prodCodeClean = (p.ITE_CODITE || "").toString().replace(/^0+/, '');
-        const prodEanClean = (p.ITE_CODBAR || "").toString().replace(/^0+/, '');
+        const prodCodeClean = (p.ITE_CODITE || "")
+          .toString()
+          .replace(/^0+/, "");
+        const prodEanClean = (p.ITE_CODBAR || "").toString().replace(/^0+/, "");
         return (
-          p.ITE_CODITE === productCode || 
+          p.ITE_CODITE === productCode ||
           p.ITE_CODBAR === productCode ||
           prodCodeClean === cleanCode ||
           prodEanClean === cleanCode
@@ -492,11 +635,18 @@ export default function App() {
       });
 
       if (product) {
-        console.log("Produto recebido do Coletor (Fila Oculta):", product.ITE_DESITE);
+        console.log(
+          "Produto recebido do Coletor (Fila Oculta):",
+          product.ITE_DESITE,
+        );
         // Adiciona na fila remota (invisível no dashboard) para não poluir a tela
         setRemoteQueue((prev) => [
-          ...prev, 
-          { ...product, queueId: Math.random().toString(36).substr(2, 9), templateId: selectedTemplate }
+          ...prev,
+          {
+            ...product,
+            queueId: Math.random().toString(36).substr(2, 9),
+            templateId: selectedTemplate,
+          },
         ]);
       } else {
         console.error("Produto não encontrado na lista atual:", productCode);
@@ -523,7 +673,9 @@ export default function App() {
 
   useEffect(() => {
     const unlisten = listen<boolean>("remote-trigger-print", () => {
-      console.log("Disparo físico de impressão solicitado via Coletor (Fila Remota).");
+      console.log(
+        "Disparo físico de impressão solicitado via Coletor (Fila Remota).",
+      );
       handleRemotePrint();
     });
     return () => {
@@ -533,9 +685,9 @@ export default function App() {
 
   const handleRemotePrint = async () => {
     if (!selectedPrinter || remoteQueue.length === 0) return;
-    
+
     // Busca o template atual para pegar as dimensões corretas
-    const currentTpl = templatesList.find(t => t.id === selectedTemplate);
+    const currentTpl = templatesList.find((t) => t.id === selectedTemplate);
     if (!currentTpl) return;
 
     setIsPrinting(true);
@@ -545,9 +697,9 @@ export default function App() {
       for (let i = 0; i < remoteQueue.length; i++) {
         const item = remoteQueue[i];
         aplicarProdutoNaEtiqueta(item);
-        
+
         // Pequena pausa para garantir atualização do canvas
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         const canvas = document.querySelector("canvas");
         if (!canvas) continue;
@@ -563,15 +715,24 @@ export default function App() {
         const bitmap = canvasToMonoBitmap(ctx, pxW, pxH);
         const offX = Math.round((config.offsetX || 0) * (dpi / 25.4));
         const offY = Math.round((config.offsetY || 0) * (dpi / 25.4));
-        
-        const tspl = generateTSPL(bitmap, pxW, pxH, w_mm, h_mm, copies, offX, offY);
+
+        const tspl = generateTSPL(
+          bitmap,
+          pxW,
+          pxH,
+          w_mm,
+          h_mm,
+          copies,
+          offX,
+          offY,
+        );
 
         await invoke<string>("print_label", {
           printerName: selectedPrinter,
           tsplContent: Array.from(tspl),
         });
       }
-      
+
       setRemoteQueue([]); // Limpa a fila oculta após imprimir
       setPrintStatus("Fila do Coletor impressa!");
     } catch (e: any) {
@@ -621,12 +782,38 @@ export default function App() {
         redo();
       }
       if (e.key === "Delete" || e.key === "Backspace") {
-        if (selectedId) removeEditorElement(selectedId);
+        if (selectedIds.size > 0) {
+          const newElements = editorData.elements.filter(
+            (el) => !selectedIds.has(el.id),
+          );
+          setEditorData((p) => ({ ...p, elements: newElements }));
+          pushToHistory(newElements);
+          setSelectedIds(new Set());
+        }
+      }
+
+      // Movimentação com setas do teclado
+      if (
+        selectedIds.size > 0 &&
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)
+      ) {
+        e.preventDefault();
+        const step = e.ctrlKey ? 0.1 : e.shiftKey ? 5 : 1;
+        const newElements = editorData.elements.map((el) => {
+          if (!selectedIds.has(el.id)) return el;
+          const updates: Partial<LabelElement> = {};
+          if (e.key === "ArrowUp") updates.y = el.y - step;
+          if (e.key === "ArrowDown") updates.y = el.y + step;
+          if (e.key === "ArrowLeft") updates.x = el.x - step;
+          if (e.key === "ArrowRight") updates.x = el.x + step;
+          return { ...el, ...updates };
+        });
+        setEditorData((p) => ({ ...p, elements: newElements }));
       }
     };
     window.addEventListener("keydown", handleKeys);
     return () => window.removeEventListener("keydown", handleKeys);
-  }, [historyStep, history, selectedId]);
+  }, [historyStep, history, selectedIds, editorData.elements]);
 
   const addEditorElement = (type: LabelElement["type"]) => {
     const id = Math.random().toString(36).substr(2, 9);
@@ -638,14 +825,14 @@ export default function App() {
       content:
         type === "text" ? "Novo Texto" : type === "barcode" ? "12345678" : "",
       w: type === "text" ? 50 : type === "barcode" ? 40 : 20,
-      h: type === "barcode" ? 15 : 10,
+      h: type === "barcode" ? 15 : type === "image" ? 20 : 10,
       fontSize: type === "text" ? 4 : 12,
       rotation: 0,
     };
     const newElements = [...editorData.elements, newEl];
     setEditorData((p) => ({ ...p, elements: newElements }));
     pushToHistory(newElements);
-    setSelectedId(id);
+    setSelectedIds(new Set([id]));
   };
 
   const updateEditorElement = (id: string, updates: Partial<LabelElement>) => {
@@ -657,80 +844,70 @@ export default function App() {
     }));
   };
 
-  const updateDashboardElement = (id: string, updates: Partial<LabelElement>) => {
+  const updateDashboardElement = (
+    id: string,
+    updates: Partial<LabelElement>,
+  ) => {
     setData((prev) => ({
       ...prev,
       custom: {
         ...prev.custom,
         [selectedTemplate]: (prev.custom[selectedTemplate] || []).map((el) =>
-          el.id === id ? { ...el, ...updates } : el
+          el.id === id ? { ...el, ...updates } : el,
         ),
       },
     }));
   };
 
-
   const removeEditorElement = (id: string) => {
     const newElements = editorData.elements.filter((el) => el.id !== id);
     setEditorData((p) => ({ ...p, elements: newElements }));
     pushToHistory(newElements);
-    setSelectedId(null);
-  };
-
-  const handleAddTemplate = () => {
-    setTemplatesList((p) => {
-      const exists = p.some((t) => t.id === selectedTemplate);
-      const templateData: Template = {
-        id: selectedTemplate,
-        label: editorData.name || "Sem Nome",
-        size: `${editorData.w}x${editorData.h}mm`,
-        w: editorData.w,
-        h: editorData.h,
-        columns: editorData.columns,
-        elements: editorData.elements,
-      };
-
-      if (exists) {
-        return p.map((t) => (t.id === selectedTemplate ? templateData : t));
-      }
-      return [
-        ...p,
-        { ...templateData, id: Math.random().toString(36).substr(2, 9) },
-      ];
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
     });
-    setActiveNav("dashboard");
   };
 
-  const startNewTemplate = () => {
-    const newId = "new_" + Math.random().toString(36).substr(2, 5);
-    setEditorData({
-      name: "Novo Modelo",
-      w: config.width1,
-      h: config.height1,
-      columns: 1,
-      elements: [],
-    });
-    setSelectedTemplate(newId);
-    setActiveNav("editor");
-    setHistory([]);
-    setHistoryStep(-1);
-  };
+  // Salva o template editado diretamente no código fonte (DEFAULT_TEMPLATES)
+  const handleSaveToSource = async () => {
+    const templateData: Template = {
+      id: selectedTemplate,
+      label: editorData.name || "Sem Nome",
+      size: `${editorData.w}x${editorData.h}mm`,
+      w: editorData.w,
+      h: editorData.h,
+      columns: editorData.columns,
+      elements: editorData.elements,
+    };
 
-  const loadTemplateToEditor = (tId: string) => {
-    const t = templatesList.find((x) => x.id === tId);
-    if (t) {
-      setSelectedId(null);
-      setTextDrawMode(false);
-      setEditorData({
-        name: t.label,
-        w: t.w || config.width1,
-        h: t.h || config.height1,
-        columns: t.columns as 1 | 2,
-        elements: JSON.parse(JSON.stringify(t.elements)),
+    try {
+      // Usa o comando Tauri para salvar no arquivo
+      await invoke("save_template_to_source", {
+        templateId: templateData.id,
+        templateJson: JSON.stringify(templateData),
       });
-      setSelectedTemplate(tId);
-      setActiveNav("editor");
+    } catch (error) {
+      console.error("Erro ao salvar no código fonte:", error);
     }
+
+    // Atualiza o estado local (templatesList)
+    setTemplatesList((p) =>
+      p.map((t) => (t.id === selectedTemplate ? templateData : t)),
+    );
+
+    // Atualiza o data.custom para o preview atualizar imediatamente
+    setData((prev) => ({
+      ...prev,
+      custom: {
+        ...prev.custom,
+        [selectedTemplate]: templateData.elements,
+      },
+    }));
+
+    // Navega de volta para o dashboard
+    setActiveNav("dashboard");
   };
 
   const aplicarProdutoNaEtiqueta = (produto: any) => {
@@ -738,6 +915,25 @@ export default function App() {
       produto.EMBALAGENS?.find((e: any) => e.PRINCIPAL_VENDAS === 1) ||
       produto.EMBALAGENS?.[0];
     const resolveField = (field: string): string => {
+      // Campos de Despacho (Pedido)
+      if (selectedTemplate === "despacho") {
+        switch (field) {
+          case "FGO_NUMDOC":
+            return `Pedido: ${produto.FGO_NUMDOC || ""}`;
+          case "FGO_ESPDOC":
+            return produto.FGO_ESPDOC || "";
+          case "CLI_NOMCLI":
+            return `Cliente: ${produto.CLI_NOMCLI || ""}`;
+          case "NOME_CONFERENTE":
+            return `Conferente: ${produto.NOME_CONFERENTE || ""}`;
+          case "VOLUMES":
+            return `Volumes: ${volumes || "1"}`;
+          default:
+            return "";
+        }
+      }
+
+      // Campos de Produtos
       switch (field) {
         case "ITE_DESITE":
           return produto.ITE_DESITE || "";
@@ -768,7 +964,143 @@ export default function App() {
         };
       }),
     );
+
+    // Atualiza data.custom para o preview atualizar imediatamente
+    const updatedElements =
+      templatesList
+        .find((t) => t.id === selectedTemplate)
+        ?.elements.map((el) => {
+          if (!el.fieldBinding) return el;
+          return { ...el, content: resolveField(el.fieldBinding) };
+        }) || [];
+
+    setData((prev) => ({
+      ...prev,
+      custom: {
+        ...prev.custom,
+        [selectedTemplate]: updatedElements,
+      },
+    }));
   };
+
+  const buscarDespacho = async (numPedido: string) => {
+    if (!numPedido.trim()) {
+      setDadosDespacho(null);
+      return;
+    }
+
+    setLoadingDespacho(true);
+    try {
+      const response = await fetch(
+        `https://marketing-banco-de-dados.velbav.easypanel.host/api/impressao-romaneio?numdoc=${numPedido}`,
+      );
+      const result = await response.json();
+
+      if (Array.isArray(result) && result.length > 0) {
+        const dados = result[0];
+        setDadosDespacho(dados);
+
+        // Calcula os elementos atualizados
+        const updatedElements =
+          templatesList
+            .find((t) => t.id === "despacho")
+            ?.elements.map((el) => {
+              if (!el.fieldBinding) return el;
+              let content = "";
+              switch (el.fieldBinding) {
+                case "FGO_NUMDOC":
+                  content = `Pedido: ${dados.FGO_NUMDOC || ""}`;
+                  break;
+                case "CLI_NOMCLI":
+                  content = `Cliente: ${dados.CLI_NOMCLI || ""}`;
+                  break;
+                case "NOME_CONFERENTE":
+                  content = `Conferente: ${dados.NOME_CONFERENTE || ""}`;
+                  break;
+                case "FGO_ESPDOC":
+                  content = dados.FGO_ESPDOC || "";
+                  break;
+                case "VOLUMES":
+                  content = `Volumes: ${volumes || "1"}`;
+                  break;
+                default:
+                  content = el.content;
+              }
+              return { ...el, content };
+            }) || [];
+
+        // Aplica os dados na etiqueta de despacho
+        setTemplatesList((prev) =>
+          prev.map((t) => {
+            if (t.id !== "despacho") return t;
+            return {
+              ...t,
+              elements: updatedElements,
+            };
+          }),
+        );
+
+        // Atualiza data.custom para o preview atualizar imediatamente
+        setData((prev) => ({
+          ...prev,
+          custom: {
+            ...prev.custom,
+            despacho: updatedElements,
+          },
+        }));
+
+        // Se o template ativo for despacho, atualiza o preview
+        if (selectedTemplate === "despacho") {
+          setData((prev) => ({ ...prev, activeTab: "despacho" }));
+        }
+      } else {
+        setDadosDespacho(null);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar dados do pedido:", error);
+      setDadosDespacho(null);
+    } finally {
+      setLoadingDespacho(false);
+    }
+  };
+
+  // Auto-buscar despacho ao digitar (com debounce de 500ms)
+  useEffect(() => {
+    if (selectedTemplate !== "despacho") return;
+
+    const termo = buscaPedido.trim();
+    if (!termo) {
+      // Resetar ao limpar
+      const defaultElements = DEFAULT_TEMPLATES.find(
+        (t) => t.id === "despacho",
+      )?.elements;
+      if (defaultElements) {
+        setDadosDespacho(null);
+        setTemplatesList((prev) =>
+          prev.map((t) =>
+            t.id === "despacho"
+              ? { ...t, elements: JSON.parse(JSON.stringify(defaultElements)) }
+              : t,
+          ),
+        );
+        setData((prev) => ({
+          ...prev,
+          custom: {
+            ...prev.custom,
+            despacho: JSON.parse(JSON.stringify(defaultElements)),
+          },
+        }));
+      }
+      return;
+    }
+
+    // Buscar automaticamente com debounce
+    const timer = setTimeout(() => {
+      buscarDespacho(termo);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [buscaPedido, selectedTemplate, volumes]);
 
   const addToQueue = (produto: any) => {
     if (!produto) return;
@@ -791,20 +1123,24 @@ export default function App() {
       setPrintStatus("Selecione uma impressora!");
       return;
     }
-    
+
     const itemsToPrint = printQueue.length > 0 ? printQueue : [null]; // Se fila vazia, imprime o atual
     setIsPrinting(true);
-    setPrintStatus(printQueue.length > 0 ? `Imprimindo fila (${printQueue.length} itens)...` : "Preparando impressão...");
+    setPrintStatus(
+      printQueue.length > 0
+        ? `Imprimindo fila (${printQueue.length} itens)...`
+        : "Preparando impressão...",
+    );
 
     try {
       for (let i = 0; i < itemsToPrint.length; i++) {
         const item = itemsToPrint[i];
-        
+
         // Se estiver imprimindo da fila, aplica os dados do item
         if (item) {
           aplicarProdutoNaEtiqueta(item);
           // Pequena pausa para o React atualizar o canvas
-          await new Promise(resolve => setTimeout(resolve, 60));
+          await new Promise((resolve) => setTimeout(resolve, 60));
         }
 
         const canvas = document.querySelector("canvas");
@@ -812,10 +1148,12 @@ export default function App() {
         const ctx = canvas.getContext("2d");
         if (!ctx) throw new Error("Contexto 2D não encontrado");
 
-        const isTwoCols = (item ? (templatesList.find(t => t.id === item.templateId)?.columns === 2) : (editorData.columns === 2));
+        const isTwoCols = item
+          ? templatesList.find((t) => t.id === item.templateId)?.columns === 2
+          : editorData.columns === 2;
         const gap = config.gap || 0;
         const singleW = editorData.w;
-        const totalW = isTwoCols ? (singleW * 2 + gap) : singleW;
+        const totalW = isTwoCols ? singleW * 2 + gap : singleW;
         const h_mm = editorData.h;
         const dpi = 203;
 
@@ -846,7 +1184,7 @@ export default function App() {
         const bitmap = canvasToMonoBitmap(finalCtx, pxW, pxH);
         const offX = Math.round((config.offsetX || 0) * (dpi / 25.4));
         const offY = Math.round((config.offsetY || 0) * (dpi / 25.4));
-        
+
         const tspl = generateTSPL(
           bitmap,
           pxW,
@@ -862,12 +1200,12 @@ export default function App() {
           printerName: selectedPrinter,
           tsplContent: Array.from(tspl),
         });
-        
+
         if (printQueue.length > 0) {
           setPrintStatus(`Imprimindo: ${i + 1} de ${itemsToPrint.length}`);
         }
       }
-      
+
       setPrintStatus("Impressão concluída!");
     } catch (e: any) {
       setPrintStatus("Erro: " + e.toString());
@@ -904,7 +1242,11 @@ export default function App() {
         <div className="px-6 w-full mb-12">
           <div className="flex items-center gap-3 group cursor-pointer">
             <div className="w-10 h-10 flex items-center justify-center group-hover:scale-105 transition-transform overflow-hidden">
-              <img src={appIcon} className="w-10 h-10 object-contain" alt="DonlyX" />
+              <img
+                src={appIcon}
+                className="w-10 h-10 object-contain"
+                alt="DonlyX"
+              />
             </div>
             <div className="hidden lg:block overflow-hidden">
               <h2 className="text-lg font-black text-white tracking-tighter leading-none">
@@ -989,9 +1331,15 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-6">
-            <div className={`px-4 py-2 rounded-xl border flex items-center gap-3 group transition-all cursor-pointer ${isCollectorOnline ? "bg-accent/10 border-accent/40" : "bg-white/5 border-white/10"}`}>
-              <div className={`w-2.5 h-2.5 rounded-full shadow-lg ${isCollectorOnline ? "bg-accent animate-pulse shadow-accent/40" : "bg-green-500 shadow-green-500/40"}`} />
-              <span className={`text-[10px] font-black tracking-widest uppercase ${isCollectorOnline ? "text-accent" : "text-white/60"}`}>
+            <div
+              className={`px-4 py-2 rounded-xl border flex items-center gap-3 group transition-all cursor-pointer ${isCollectorOnline ? "bg-accent/10 border-accent/40" : "bg-white/5 border-white/10"}`}
+            >
+              <div
+                className={`w-2.5 h-2.5 rounded-full shadow-lg ${isCollectorOnline ? "bg-accent animate-pulse shadow-accent/40" : "bg-green-500 shadow-green-500/40"}`}
+              />
+              <span
+                className={`text-[10px] font-black tracking-widest uppercase ${isCollectorOnline ? "text-accent" : "text-white/60"}`}
+              >
                 {isCollectorOnline ? "Coletor Conectado" : "Sistema Online"}
               </span>
             </div>
@@ -1038,18 +1386,15 @@ export default function App() {
                           <label className="text-[10px] font-black text-white/40 uppercase tracking-[.25em]">
                             Modelos Disponíveis
                           </label>
-                          <button
-                            onClick={startNewTemplate}
-                            className="p-1 px-3 rounded-lg bg-accent/10 border border-accent/20 text-accent text-[9px] font-black uppercase tracking-widest hover:bg-accent/20 transition-all"
-                          >
-                            + Novo
-                          </button>
                         </div>
                         <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                          {templatesList.map((t) => (
+                          {DEFAULT_TEMPLATES.map((t) => (
                             <div key={t.id} className="relative group">
                               <button
-                                onClick={() => { setSelectedTemplate(t.id); setSelectedId(null); }}
+                                onClick={() => {
+                                    setSelectedTemplate(t.id);
+                                    setSelectedIds(new Set());
+                                }}
                                 className={`w-full text-left p-5 rounded-2xl border transition-all relative ${
                                   selectedTemplate === t.id
                                     ? "bg-accent/10 border-accent/40 shadow-xl shadow-accent/5 ring-1 ring-accent/20"
@@ -1081,17 +1426,6 @@ export default function App() {
                                   {t.columns} Coluna
                                   {t.columns > 1 ? "s" : ""}
                                 </p>
-                              </button>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  loadTemplateToEditor(t.id);
-                                }}
-                                className="absolute bottom-5 right-5 p-2 rounded-xl bg-white/5 hover:bg-accent hover:text-black text-white/20 hover:scale-110 transition-all opacity-0 group-hover:opacity-100 z-10"
-                                title="Editar Modelo"
-                              >
-                                <Pencil size={14} />
                               </button>
                             </div>
                           ))}
@@ -1154,28 +1488,95 @@ export default function App() {
                               )?.h || config.height1
                             }
                             dpi={203}
+                            queueItems={printQueue}
                             onUpdateElement={(id, updates) => {
                               if ("content" in updates)
-                                updateDashboardElement(id, { content: updates.content });
+                                updateDashboardElement(id, {
+                                  content: updates.content,
+                                });
                             }}
                           />
                         </div>
                       </div>
 
-                      <div className="mt-8 w-full max-w-sm space-y-2">
-                        <input
-                          type="text"
-                          value={buscaCodigo}
-                          onChange={(e) => setBuscaCodigo(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && produtoEncontrado) {
-                              addToQueue(produtoEncontrado);
-                              setBuscaCodigo("");
-                            }
-                          }}
-                          placeholder="Código do item..."
-                          className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-accent/40 focus:bg-white/[0.06] transition-all text-center text-lg placeholder:text-white/10 shadow-inner"
-                        />
+                      <div className="mt-8 w-full max-w-sm space-y-3">
+                        {selectedTemplate === "despacho" ? (
+                          <>
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={buscaPedido}
+                                onChange={(e) => setBuscaPedido(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    buscarDespacho(buscaPedido);
+                                  }
+                                }}
+                                placeholder="Número do pedido..."
+                                className="flex-1 bg-white/[0.03] border border-white/10 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-accent/40 focus:bg-white/[0.06] transition-all text-center text-lg placeholder:text-white/10 shadow-inner"
+                              />
+                              <input
+                                type="number"
+                                value={volumes}
+                                onChange={(e) => setVolumes(e.target.value)}
+                                min="1"
+                                placeholder="Volumes"
+                                className="w-24 bg-white/[0.03] border border-white/10 rounded-2xl px-4 py-4 text-white font-bold outline-none focus:border-accent/40 focus:bg-white/[0.06] transition-all text-center text-lg placeholder:text-white/10 shadow-inner"
+                              />
+                              {dadosDespacho && (
+                                <button
+                                  onClick={() => {
+                                    setBuscaPedido("");
+                                    setDadosDespacho(null);
+                                  }}
+                                  className="bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 rounded-2xl px-4 py-2 transition-all"
+                                  title="Limpar"
+                                >
+                                  <X size={20} />
+                                </button>
+                              )}
+                            </div>
+                            {loadingDespacho && (
+                              <p className="text-center text-xs text-accent/60 font-medium">
+                                Buscando dados do pedido...
+                              </p>
+                            )}
+                            {dadosDespacho && (
+                              <div className="bg-accent/5 border border-accent/20 rounded-2xl px-4 py-3 text-center">
+                                <p className="text-xs text-white font-bold">
+                                  {dadosDespacho.CLI_NOMCLI}
+                                </p>
+                                <p className="text-[10px] text-white/40 font-medium mt-1">
+                                  Pedido: {dadosDespacho.FGO_NUMDOC} •{" "}
+                                  {dadosDespacho.FGO_ESPDOC}
+                                </p>
+                                <p className="text-[10px] text-white/30 font-medium mt-0.5">
+                                  Conferente: {dadosDespacho.NOME_CONFERENTE}
+                                </p>
+                              </div>
+                            )}
+                            {!dadosDespacho && !loadingDespacho && (
+                              <p className="text-center text-[10px] text-white/30 font-medium">
+                                Digite o número do pedido para gerar a etiqueta
+                                de despacho
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <input
+                            type="text"
+                            value={buscaCodigo}
+                            onChange={(e) => setBuscaCodigo(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && produtoEncontrado) {
+                                addToQueue(produtoEncontrado);
+                                setBuscaCodigo("");
+                              }
+                            }}
+                            placeholder="Código do item..."
+                            className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-accent/40 focus:bg-white/[0.06] transition-all text-center text-lg placeholder:text-white/10 shadow-inner"
+                          />
+                        )}
                       </div>
                     </div>
 
@@ -1379,7 +1780,13 @@ export default function App() {
                               }
                             />
                             <span className="text-[8px] font-bold text-white/60 uppercase tracking-tight">
-                              {tool.id === "text" ? "Texto" : tool.id === "barcode" ? "BC" : tool.id === "image" ? "Img" : tool.id}
+                              {tool.id === "text"
+                                ? "Texto"
+                                : tool.id === "barcode"
+                                  ? "BC"
+                                  : tool.id === "image"
+                                    ? "Img"
+                                    : tool.id}
                             </span>
                           </button>
                         ))}
@@ -1387,510 +1794,928 @@ export default function App() {
                     </div>
 
                     <AnimatePresence>
-                      {selectedId && (
-                        <motion.div
+                      {(() => {
+                        const activeId = Array.from(selectedIds).pop() || null;
+                        return activeId && (
+                          <motion.div
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 10 }}
                           className="glass-card rounded-2xl p-5 space-y-4 border-accent/20 bg-accent/5"
                         >
                           {(() => {
-                            const el = editorData.elements.find((e) => e.id === selectedId);
-                            if (!el) { setSelectedId(null); return null; }
+                            const activeId = Array.from(selectedIds).pop();
+                            const el = editorData.elements.find(
+                              (e) => e.id === activeId,
+                            );
+                            if (!el) return null;
                             return (
                               <div className="space-y-6">
-                                  <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">
-                                      Propriedades: <span className="text-accent">{el.type}</span>
+                                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                                  <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                                    Propriedades:{" "}
+                                    <span className="text-accent">
+                                      {el.type}
                                     </span>
-                                    <button onClick={() => setSelectedId(null)} className="p-1.5 hover:bg-white/10 rounded-xl transition-colors">
-                                      <X size={14} className="text-white/40" />
-                                    </button>
-                                  </div>
+                                  </span>
+                                  <button
+                                    onClick={() => setSelectedIds(new Set())}
+                                    className="p-1.5 hover:bg-white/10 rounded-xl transition-colors"
+                                  >
+                                    <X size={14} className="text-white/40" />
+                                  </button>
+                                </div>
 
-                                  <div className="space-y-6">
-                                    {el.type === "image" && (
-                                      <div className="space-y-3">
-                                        <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Símbolos Disponíveis</label>
-                                        <div className="grid grid-cols-4 gap-2">
-                                          {LOGISTICS_ICONS.map((icon) => (
+                                <div className="space-y-6">
+                                  {el.type === "image" && (
+                                    <div className="space-y-3">
+                                      <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                        Símbolos Disponíveis
+                                      </label>
+                                      <div className="grid grid-cols-4 gap-2">
+                                        {LOGISTICS_ICONS.map((icon) => (
+                                          <button
+                                            key={icon.name}
+                                            title={icon.name}
+                                            onClick={() => {
+                                              updateEditorElement(el.id, {
+                                                content: icon.data,
+                                                w: 20,
+                                                h: 20,
+                                              });
+                                              pushToHistory(
+                                                editorData.elements,
+                                              );
+                                            }}
+                                            className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl bg-black/40 border border-white/5 hover:border-accent/40 transition-all text-white/40 hover:text-accent shadow-inner"
+                                          >
+                                            {icon.icon}
+                                            <span className="text-[8px] leading-none">
+                                              {icon.name}
+                                            </span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  <div className="space-y-4">
+                                    <div className="space-y-1.5">
+                                      <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                        Conteúdo
+                                      </label>
+                                      <div className="flex gap-2">
+                                        <input
+                                          value={
+                                            el.content.startsWith("data:")
+                                              ? "Imagem/Símbolo"
+                                              : el.content
+                                          }
+                                          onChange={(e) =>
+                                            updateEditorElement(el.id, {
+                                              content: e.target.value,
+                                            })
+                                          }
+                                          className="flex-1 bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2.5 outline-none focus:border-accent/40 transition-all"
+                                        />
+                                        {el.type === "image" && (
+                                          <button
+                                            onClick={() =>
+                                              document
+                                                .getElementById("img-up")
+                                                ?.click()
+                                            }
+                                            className="p-2.5 rounded-xl bg-accent/20 border border-accent/20 text-accent hover:bg-accent/30 transition-all"
+                                          >
+                                            <Upload size={14} />
+                                            <input
+                                              id="img-up"
+                                              type="file"
+                                              className="hidden"
+                                              onChange={(e) =>
+                                                e.target.files?.[0] &&
+                                                handleImageUpload(
+                                                  el.id,
+                                                  e.target.files[0],
+                                                )
+                                              }
+                                            />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {(el.type === "text" ||
+                                      el.type === "barcode") && (
+                                      <div className="space-y-1.5">
+                                        <label className="text-[9px] font-bold text-accent/80 uppercase tracking-widest ml-1">
+                                          Vincular Campo API
+                                        </label>
+                                        <select
+                                          value={el.fieldBinding || ""}
+                                          onChange={(e) =>
+                                            updateEditorElement(el.id, {
+                                              fieldBinding:
+                                                e.target.value || undefined,
+                                            })
+                                          }
+                                          className="w-full bg-black/40 border border-accent/20 text-[11px] text-white rounded-xl px-3 py-2.5 outline-none focus:border-accent/60 transition-all"
+                                        >
+                                          <option value="">
+                                            — Manual (sem vínculo) —
+                                          </option>
+                                          <optgroup label="Produtos">
+                                            <option value="ITE_DESITE">
+                                              Descrição do Produto
+                                            </option>
+                                            <option value="ITE_CODITE">
+                                              Código do Item
+                                            </option>
+                                            <option value="ITE_CODBAR">
+                                              Código de Barras (EAN)
+                                            </option>
+                                            <option value="MARCA">Marca</option>
+                                            <option value="QTD_TEXT">
+                                              Quantidade / Embalagem
+                                            </option>
+                                          </optgroup>
+                                          <optgroup label="Despacho (Pedido)">
+                                            <option value="FGO_NUMDOC">
+                                              Número do Pedido
+                                            </option>
+                                            <option value="FGO_ESPDOC">
+                                              Espécie do Documento
+                                            </option>
+                                            <option value="CLI_NOMCLI">
+                                              Nome do Cliente
+                                            </option>
+                                            <option value="NOME_CONFERENTE">
+                                              Nome do Conferente
+                                            </option>
+                                            <option value="VOLUMES">
+                                              Volumes
+                                            </option>
+                                          </optgroup>
+                                        </select>
+                                      </div>
+                                    )}
+
+                                    {el.type === "text" && (
+                                      <>
+                                        {/* Dimensões e Medidas */}
+                                        <div className="glass-card rounded-xl p-5 border-white/10 bg-white/[0.03] space-y-4">
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <Type
+                                              size={14}
+                                              className="text-accent"
+                                            />
+                                            <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                                              Dimensões
+                                            </span>
+                                          </div>
+
+                                          <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1.5">
+                                              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                                Tamanho Fonte
+                                              </label>
+                                              <input
+                                                type="number"
+                                                step="0.5"
+                                                min="1"
+                                                max="72"
+                                                value={el.fontSize ?? 4}
+                                                onChange={(e) =>
+                                                  updateEditorElement(el.id, {
+                                                    fontSize: parseFloat(
+                                                      e.target.value,
+                                                    ),
+                                                  })
+                                                }
+                                                className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
+                                              />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                                Altura Linha
+                                              </label>
+                                              <input
+                                                type="number"
+                                                step="0.1"
+                                                min="0.5"
+                                                max="3"
+                                                value={el.lineHeight ?? 1.3}
+                                                onChange={(e) =>
+                                                  updateEditorElement(el.id, {
+                                                    lineHeight: parseFloat(
+                                                      e.target.value,
+                                                    ),
+                                                  })
+                                                }
+                                                className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
+                                              />
+                                            </div>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1.5">
+                                              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                                Largura (mm)
+                                              </label>
+                                              <input
+                                                type="number"
+                                                step="1"
+                                                min="10"
+                                                value={el.w ?? 50}
+                                                onChange={(e) =>
+                                                  updateEditorElement(el.id, {
+                                                    w: Math.max(
+                                                      10,
+                                                      parseFloat(
+                                                        e.target.value,
+                                                      ) || 50,
+                                                    ),
+                                                  })
+                                                }
+                                                className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
+                                              />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                                Altura (mm)
+                                              </label>
+                                              <input
+                                                type="number"
+                                                step="0.5"
+                                                min="5"
+                                                value={el.h ?? 10}
+                                                onChange={(e) =>
+                                                  updateEditorElement(el.id, {
+                                                    h: Math.max(
+                                                      5,
+                                                      parseFloat(
+                                                        e.target.value,
+                                                      ) || 10,
+                                                    ),
+                                                  })
+                                                }
+                                                className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {/* Estilo do Texto */}
+                                        <div className="glass-card rounded-xl p-5 border-white/10 bg-white/[0.03] space-y-4">
+                                          <div className="flex items-center gap-2 mb-3">
+                                            <Type
+                                              size={14}
+                                              className="text-accent"
+                                            />
+                                            <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                                              Estilo
+                                            </span>
+                                          </div>
+
+                                          <div className="grid grid-cols-2 gap-3">
                                             <button
-                                              key={icon.name}
-                                              title={icon.name}
-                                              onClick={() => {
-                                                updateEditorElement(el.id, { content: icon.data, w: 20, h: 20 });
-                                                pushToHistory(editorData.elements);
-                                              }}
-                                              className="flex flex-col items-center justify-center gap-1 p-2 rounded-xl bg-black/40 border border-white/5 hover:border-accent/40 transition-all text-white/40 hover:text-accent shadow-inner"
+                                              onClick={() =>
+                                                updateEditorElement(el.id, {
+                                                  bold: !el.bold,
+                                                })
+                                              }
+                                              className={`py-3 px-4 rounded-xl border text-[10px] font-black transition-all ${el.bold ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 text-white/40 border-white/10 hover:bg-white/5 hover:text-white"}`}
                                             >
-                                              {icon.icon}
-                                              <span className="text-[8px] leading-none">{icon.name}</span>
+                                              <div className="flex flex-col items-center gap-1">
+                                                <span className="text-lg leading-none">
+                                                  B
+                                                </span>
+                                                <span>Bold</span>
+                                              </div>
                                             </button>
-                                          ))}
+                                            <button
+                                              onClick={() =>
+                                                updateEditorElement(el.id, {
+                                                  italic: !el.italic,
+                                                })
+                                              }
+                                              className={`py-3 px-4 rounded-xl border text-[10px] font-black transition-all ${el.italic ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 text-white/40 border-white/10 hover:bg-white/5 hover:text-white"}`}
+                                            >
+                                              <div className="flex flex-col items-center gap-1">
+                                                <span className="text-lg leading-none italic">
+                                                  I
+                                                </span>
+                                                <span>Italic</span>
+                                              </div>
+                                            </button>
+                                          </div>
+
+                                          <div className="space-y-2">
+                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                              Alinhamento
+                                            </label>
+                                            <div className="grid grid-cols-3 gap-2">
+                                              {(
+                                                [
+                                                  "left",
+                                                  "center",
+                                                  "right",
+                                                ] as const
+                                              ).map((a) => (
+                                                <button
+                                                  key={a}
+                                                  onClick={() =>
+                                                    updateEditorElement(el.id, {
+                                                      align: a,
+                                                    })
+                                                  }
+                                                  className={`p-2.5 rounded-xl border transition-all flex items-center justify-center ${el.align === a || (!el.align && a === "center") ? "bg-accent/20 border-accent/40 text-accent" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
+                                                >
+                                                  {a === "left" ? (
+                                                    <AlignLeft size={16} />
+                                                  ) : a === "center" ? (
+                                                    <AlignCenter size={16} />
+                                                  ) : (
+                                                    <AlignRight size={16} />
+                                                  )}
+                                                </button>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {/* Fonte */}
+                                        <div className="glass-card rounded-xl p-5 border-white/10 bg-white/[0.03] space-y-4">
+                                          <div className="flex items-center gap-2 mb-3">
+                                            <Type
+                                              size={14}
+                                              className="text-accent"
+                                            />
+                                            <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                                              Fonte
+                                            </span>
+                                          </div>
+                                          <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                            Fonte
+                                          </label>
+                                          <button
+                                            onClick={() =>
+                                              setShowFontMenu(!showFontMenu)
+                                            }
+                                            className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2.5 outline-none flex items-center justify-between group hover:border-accent/40 transition-all"
+                                          >
+                                            <span
+                                              style={{
+                                                fontFamily:
+                                                  el.fontFamily || "Inter",
+                                              }}
+                                            >
+                                              {el.fontFamily || "Inter"}
+                                            </span>
+                                            <ChevronDown
+                                              size={14}
+                                              className={`text-white/20 group-hover:text-accent transition-transform ${showFontMenu ? "rotate-180" : ""}`}
+                                            />
+                                          </button>
+
+                                          <AnimatePresence>
+                                            {showFontMenu && (
+                                              <>
+                                                <div
+                                                  className="fixed inset-0 z-[100]"
+                                                  onClick={() =>
+                                                    setShowFontMenu(false)
+                                                  }
+                                                />
+                                                <motion.div
+                                                  initial={{
+                                                    opacity: 0,
+                                                    y: 10,
+                                                    scale: 0.95,
+                                                  }}
+                                                  animate={{
+                                                    opacity: 1,
+                                                    y: 0,
+                                                    scale: 1,
+                                                  }}
+                                                  exit={{
+                                                    opacity: 0,
+                                                    y: 10,
+                                                    scale: 0.95,
+                                                  }}
+                                                  className="absolute bottom-full left-0 w-full mb-2 bg-[#0A0F1E] border border-white/10 rounded-2xl shadow-2xl z-[101] overflow-hidden max-h-[280px] overflow-y-auto custom-scrollbar"
+                                                >
+                                                  <div className="p-2 space-y-1">
+                                                    {fonts.map((f) => (
+                                                      <button
+                                                        key={f.name}
+                                                        onClick={() => {
+                                                          updateEditorElement(
+                                                            el.id,
+                                                            {
+                                                              fontFamily:
+                                                                f.name,
+                                                            },
+                                                          );
+                                                          setShowFontMenu(
+                                                            false,
+                                                          );
+                                                        }}
+                                                        className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group ${
+                                                          (el.fontFamily ||
+                                                            "Inter") === f.name
+                                                            ? "bg-accent text-black"
+                                                            : "text-white/60 hover:bg-white/5 hover:text-white"
+                                                        }`}
+                                                      >
+                                                        <span
+                                                          style={{
+                                                            fontFamily:
+                                                              f.family,
+                                                            fontSize: "14px",
+                                                          }}
+                                                        >
+                                                          {f.name}
+                                                        </span>
+                                                        {(el.fontFamily ||
+                                                          "Inter") ===
+                                                          f.name && (
+                                                          <div className="w-1.5 h-1.5 rounded-full bg-black" />
+                                                        )}
+                                                      </button>
+                                                    ))}
+                                                  </div>
+                                                </motion.div>
+                                              </>
+                                            )}
+                                          </AnimatePresence>
+                                        </div>
+                                      </>
+                                    )}
+
+                                    {el.type === "barcode" && (
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div className="space-y-1.5">
+                                          <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                            Formato
+                                          </label>
+                                          <select
+                                            value={el.bcFormat || "CODE128"}
+                                            onChange={(e) =>
+                                              updateEditorElement(el.id, {
+                                                bcFormat: e.target.value,
+                                              })
+                                            }
+                                            className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none focus:border-accent"
+                                          >
+                                            <option value="CODE128">
+                                              CODE 128
+                                            </option>
+                                            <option value="CODE39">
+                                              CODE 39
+                                            </option>
+                                            <option value="EAN13">
+                                              EAN-13
+                                            </option>
+                                            <option value="EAN8">EAN-8</option>
+                                            <option value="ITF14">
+                                              ITF-14
+                                            </option>
+                                            <option value="UPC">UPC-A</option>
+                                          </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                            Tam. Fonte
+                                          </label>
+                                          <input
+                                            type="number"
+                                            step="0.1"
+                                            min="0.1"
+                                            value={el.bcFontSize ?? 2.8}
+                                            onChange={(e) => {
+                                              const val = parseFloat(
+                                                e.target.value,
+                                              );
+                                              updateEditorElement(el.id, {
+                                                bcFontSize: isNaN(val)
+                                                  ? 2.8
+                                                  : val,
+                                              });
+                                            }}
+                                            className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none focus:border-accent"
+                                          />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                            Dist. Números
+                                          </label>
+                                          <input
+                                            type="number"
+                                            step="0.1"
+                                            value={el.bcLabelDist ?? 1}
+                                            onChange={(e) => {
+                                              const val = parseFloat(
+                                                e.target.value,
+                                              );
+                                              updateEditorElement(el.id, {
+                                                bcLabelDist: isNaN(val)
+                                                  ? 1
+                                                  : val,
+                                              });
+                                            }}
+                                            className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none focus:border-accent"
+                                          />
                                         </div>
                                       </div>
                                     )}
 
-                                    <div className="space-y-4">
-                                      <div className="space-y-1.5">
-                                        <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Conteúdo</label>
-                                        <div className="flex gap-2">
-                                          <input
-                                            value={el.content.startsWith("data:") ? "Imagem/Símbolo" : el.content}
-                                            onChange={(e) => updateEditorElement(el.id, { content: e.target.value })}
-                                            className="flex-1 bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2.5 outline-none focus:border-accent/40 transition-all"
-                                          />
-                                          {el.type === "image" && (
-                                            <button
-                                              onClick={() => document.getElementById("img-up")?.click()}
-                                              className="p-2.5 rounded-xl bg-accent/20 border border-accent/20 text-accent hover:bg-accent/30 transition-all"
-                                            >
-                                              <Upload size={14} />
-                                              <input id="img-up" type="file" className="hidden" onChange={(e) => e.target.files?.[0] && handleImageUpload(el.id, e.target.files[0])} />
-                                            </button>
+                                    {(el.type === "line" ||
+                                      el.type === "rect") && (
+                                      <>
+                                        {/* Dimensões e Orientação da Shape */}
+                                        <div className="glass-card rounded-xl p-5 border-white/10 bg-white/[0.03] space-y-4">
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <Minus
+                                              size={14}
+                                              className="text-accent"
+                                            />
+                                            <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                                              Dimensões & Orientação
+                                            </span>
+                                          </div>
+
+                                          <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1.5">
+                                              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                                Largura (mm)
+                                              </label>
+                                              <input
+                                                type="number"
+                                                step="1"
+                                                min="5"
+                                                value={el.w ?? 20}
+                                                onChange={(e) =>
+                                                  updateEditorElement(el.id, {
+                                                    w: Math.max(
+                                                      5,
+                                                      parseFloat(
+                                                        e.target.value,
+                                                      ) || 20,
+                                                    ),
+                                                  })
+                                                }
+                                                className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
+                                              />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                                Altura (mm)
+                                              </label>
+                                              <input
+                                                type="number"
+                                                step="1"
+                                                min="5"
+                                                value={el.h ?? 10}
+                                                onChange={(e) =>
+                                                  updateEditorElement(el.id, {
+                                                    h: Math.max(
+                                                      5,
+                                                      parseFloat(
+                                                        e.target.value,
+                                                      ) || 10,
+                                                    ),
+                                                  })
+                                                }
+                                                className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
+                                              />
+                                            </div>
+                                          </div>
+
+                                          {el.type === "line" && (
+                                            <>
+                                              <div className="space-y-1.5 pt-2">
+                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                                  Orientação
+                                                </label>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                  <button
+                                                    onClick={() =>
+                                                      updateEditorElement(
+                                                        el.id,
+                                                        {
+                                                          rotation: 0,
+                                                          h: Math.max(
+                                                            el.w ?? 20,
+                                                            el.h ?? 10,
+                                                          ),
+                                                        },
+                                                      )
+                                                    }
+                                                    className={`py-2 rounded-xl border text-[9px] font-black transition-all ${el.rotation === 180 || el.rotation === -180 ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
+                                                  >
+                                                    Horizontal
+                                                  </button>
+                                                  <button
+                                                    onClick={() =>
+                                                      updateEditorElement(
+                                                        el.id,
+                                                        {
+                                                          rotation: 90,
+                                                          w: Math.max(
+                                                            el.w ?? 20,
+                                                            el.h ?? 10,
+                                                          ),
+                                                        },
+                                                      )
+                                                    }
+                                                    className={`py-2 rounded-xl border text-[9px] font-black transition-all ${el.rotation === 90 || el.rotation === -90 ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
+                                                  >
+                                                    Vertical
+                                                  </button>
+                                                  <button
+                                                    onClick={() =>
+                                                      updateEditorElement(
+                                                        el.id,
+                                                        { rotation: 45 },
+                                                      )
+                                                    }
+                                                    className={`py-2 rounded-xl border text-[9px] font-black transition-all ${el.rotation === 45 || el.rotation === -135 ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
+                                                  >
+                                                    Diagonal
+                                                  </button>
+                                                </div>
+                                              </div>
+
+                                              <div className="space-y-1.5">
+                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                                  Estilo da Linha
+                                                </label>
+                                                <div className="grid grid-cols-3 gap-2">
+                                                  <button
+                                                    onClick={() => {
+                                                      updateEditorElement(
+                                                        el.id,
+                                                        {
+                                                          strokeDasharray:
+                                                            undefined,
+                                                          lineDash: undefined,
+                                                        },
+                                                      );
+                                                    }}
+                                                    className={`py-2 px-2 rounded-xl border text-[9px] font-black transition-all flex flex-col items-center gap-1 ${!el.strokeDasharray ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
+                                                  >
+                                                    <div className="h-4 border-b-2 border-current" />
+                                                    <span>Sólida</span>
+                                                  </button>
+                                                  <button
+                                                    onClick={() =>
+                                                      updateEditorElement(
+                                                        el.id,
+                                                        {
+                                                          strokeDasharray: [
+                                                            4, 4,
+                                                          ],
+                                                        },
+                                                      )
+                                                    }
+                                                    className={`py-2 px-2 rounded-xl border text-[9px] font-black transition-all flex flex-col items-center gap-1 ${JSON.stringify(el.strokeDasharray) === JSON.stringify([4, 4]) ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
+                                                  >
+                                                    <div
+                                                      className="h-4 flex items-center justify-between"
+                                                      style={{ gap: "6px" }}
+                                                    >
+                                                      <div className="h-2 w-3 border-b-2 border-current" />
+                                                      <div className="h-2 w-3 border-[1px] border-dashed border-current" />
+                                                    </div>
+                                                    <span>Pontuada</span>
+                                                  </button>
+                                                  <button
+                                                    onClick={() =>
+                                                      updateEditorElement(
+                                                        el.id,
+                                                        {
+                                                          strokeDasharray: [
+                                                            10, 5,
+                                                          ],
+                                                        },
+                                                      )
+                                                    }
+                                                    className={`py-2 px-2 rounded-xl border text-[9px] font-black transition-all flex flex-col items-center gap-1 ${JSON.stringify(el.strokeDasharray) === JSON.stringify([10, 5]) ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
+                                                  >
+                                                    <div
+                                                      className="h-4 flex items-center justify-between"
+                                                      style={{ gap: "4px" }}
+                                                    >
+                                                      <div className="h-2 w-6 border-b-2 border-current" />
+                                                      <div className="h-2 w-3 border-b-[3px] border-current" />
+                                                    </div>
+                                                    <span>Pontilhada</span>
+                                                  </button>
+                                                </div>
+                                              </div>
+
+                                              <div className="space-y-1.5">
+                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                                  Espessura da Linha
+                                                </label>
+                                                <div className="flex items-center gap-3">
+                                                  <input
+                                                    type="range"
+                                                    min="0.5"
+                                                    max="20"
+                                                    step="0.5"
+                                                    value={el.strokeWidth ?? 1}
+                                                    onChange={(e) =>
+                                                      updateEditorElement(
+                                                        el.id,
+                                                        {
+                                                          strokeWidth:
+                                                            parseFloat(
+                                                              e.target.value,
+                                                            ),
+                                                        },
+                                                      )
+                                                    }
+                                                    className="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-accent"
+                                                  />
+                                                  <span className="text-sm font-bold text-white w-12 text-right">
+                                                    {el.strokeWidth?.toFixed(1)}
+                                                    mm
+                                                  </span>
+                                                </div>
+                                              </div>
+
+                                              {/* Presets de Comprimento */}
+                                              <div className="space-y-1.5 pt-2">
+                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                                  Presets Rápidos
+                                                </label>
+                                                <div className="grid grid-cols-4 gap-2">
+                                                  <button
+                                                    onClick={() =>
+                                                      updateEditorElement(
+                                                        el.id,
+                                                        { w: 50 },
+                                                      )
+                                                    }
+                                                    className="py-2 px-2 rounded-xl border text-[8px] font-bold bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white transition-all"
+                                                  >
+                                                    Curta
+                                                  </button>
+                                                  <button
+                                                    onClick={() =>
+                                                      updateEditorElement(
+                                                        el.id,
+                                                        { w: 80 },
+                                                      )
+                                                    }
+                                                    className="py-2 px-2 rounded-xl border text-[8px] font-bold bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white transition-all"
+                                                  >
+                                                    Média
+                                                  </button>
+                                                  <button
+                                                    onClick={() =>
+                                                      updateEditorElement(
+                                                        el.id,
+                                                        { w: 100, h: 5 },
+                                                      )
+                                                    }
+                                                    className="py-2 px-2 rounded-xl border text-[8px] font-bold bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white transition-all"
+                                                  >
+                                                    Longa
+                                                  </button>
+                                                  <button
+                                                    onClick={() =>
+                                                      updateEditorElement(
+                                                        el.id,
+                                                        { rotation: 0, w: 90 },
+                                                      )
+                                                    }
+                                                    className="py-2 px-2 rounded-xl border text-[8px] font-bold bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white transition-all"
+                                                  >
+                                                    Cheia
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            </>
                                           )}
+                                        </div>
+
+                                        {/* Estilo da Shape */}
+                                        {el.type === "rect" && (
+                                          <div className="glass-card rounded-xl p-5 border-white/10 bg-white/[0.03] space-y-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                              <SquareIcon
+                                                size={14}
+                                                className="text-accent"
+                                              />
+                                              <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                                                Estilo
+                                              </span>
+                                            </div>
+
+                                            <button
+                                              onClick={() =>
+                                                updateEditorElement(el.id, {
+                                                  fill: !el.fill,
+                                                })
+                                              }
+                                              className={`w-full py-4 px-4 rounded-xl border text-sm font-black transition-all flex items-center justify-center gap-2 ${
+                                                el.fill
+                                                  ? "bg-accent text-black border-accent shadow-lg shadow-accent/20"
+                                                  : "bg-black/40 text-white/40 border-white/10 hover:bg-white/5 hover:text-white"
+                                              }`}
+                                            >
+                                              <div
+                                                className={`w-6 h-6 rounded border-2 ${el.fill ? "bg-current" : "bg-transparent"}`}
+                                              />
+                                              <span>
+                                                {el.fill
+                                                  ? "Preenchido"
+                                                  : "Contorno"}
+                                              </span>
+                                            </button>
+
+                                            <div className="space-y-1.5">
+                                              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                                Cor da Borda
+                                              </label>
+                                              <input
+                                                type="color"
+                                                value={el.color ?? "#000000"}
+                                                onChange={(e) =>
+                                                  updateEditorElement(el.id, {
+                                                    color: e.target.value,
+                                                  })
+                                                }
+                                                className="w-full h-10 rounded-xl bg-transparent border border-white/10 cursor-pointer"
+                                              />
+                                            </div>
+
+                                            {/* Efeito 3D - Sombra */}
+                                            <div className="space-y-1.5">
+                                              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                                Efeito 3D
+                                              </label>
+                                              <button
+                                                onClick={() =>
+                                                  updateEditorElement(el.id, {
+                                                    fill: true,
+                                                    color: "#0096DA",
+                                                  })
+                                                }
+                                                className="w-full py-2 px-4 rounded-xl border text-[10px] font-bold bg-[#0096DA]/20 border-[#0096DA]/40 text-[#0096DA] hover:bg-[#0096DA]/30 transition-all"
+                                              >
+                                                Aplicar Azul 3D
+                                              </button>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </>
+                                    )}
+
+                                    {el.type === "image" && (
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div className="space-y-1.5">
+                                          <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                            W (mm)
+                                          </label>
+                                          <input
+                                            type="number"
+                                            value={el.w}
+                                            onChange={(e) =>
+                                              updateEditorElement(el.id, {
+                                                w: Number(e.target.value),
+                                              })
+                                            }
+                                            className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none"
+                                          />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">
+                                            H (mm)
+                                          </label>
+                                          <input
+                                            type="number"
+                                            value={el.h}
+                                            onChange={(e) =>
+                                              updateEditorElement(el.id, {
+                                                h: Number(e.target.value),
+                                              })
+                                            }
+                                            className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none"
+                                          />
                                         </div>
                                       </div>
-
-                                      {(el.type === "text" || el.type === "barcode") && (
-                                        <div className="space-y-1.5">
-                                          <label className="text-[9px] font-bold text-accent/80 uppercase tracking-widest ml-1">Vincular Campo API</label>
-                                          <select
-                                            value={el.fieldBinding || ""}
-                                            onChange={(e) => updateEditorElement(el.id, { fieldBinding: e.target.value || undefined })}
-                                            className="w-full bg-black/40 border border-accent/20 text-[11px] text-white rounded-xl px-3 py-2.5 outline-none focus:border-accent/60 transition-all"
-                                          >
-                                            <option value="">— Manual (sem vínculo) —</option>
-                                            <option value="ITE_DESITE">Descrição do Produto</option>
-                                            <option value="ITE_CODITE">Código do Item</option>
-                                            <option value="ITE_CODBAR">Código de Barras (EAN)</option>
-                                            <option value="MARCA">Marca</option>
-                                            <option value="QTD_TEXT">Quantidade / Embalagem</option>
-                                          </select>
-                                        </div>
-                                      )}
-
-                                      {el.type === "text" && (
-                                        <>
-                                          {/* Dimensões e Medidas */}
-                                          <div className="glass-card rounded-xl p-5 border-white/10 bg-white/[0.03] space-y-4">
-                                            <div className="flex items-center gap-2 mb-1">
-                                              <Type size={14} className="text-accent" />
-                                              <span className="text-[10px] font-black text-white uppercase tracking-widest">Dimensões</span>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-3">
-                                              <div className="space-y-1.5">
-                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Tamanho Fonte</label>
-                                                <input
-                                                  type="number"
-                                                  step="0.5"
-                                                  min="1"
-                                                  max="72"
-                                                  value={el.fontSize ?? 4}
-                                                  onChange={(e) => updateEditorElement(el.id, { fontSize: parseFloat(e.target.value) })}
-                                                  className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
-                                                />
-                                              </div>
-                                              <div className="space-y-1.5">
-                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Altura Linha</label>
-                                                <input
-                                                  type="number"
-                                                  step="0.1"
-                                                  min="0.5"
-                                                  max="3"
-                                                  value={el.lineHeight ?? 1.3}
-                                                  onChange={(e) => updateEditorElement(el.id, { lineHeight: parseFloat(e.target.value) })}
-                                                  className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
-                                                />
-                                              </div>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-3">
-                                              <div className="space-y-1.5">
-                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Largura (mm)</label>
-                                                <input
-                                                  type="number"
-                                                  step="1"
-                                                  min="10"
-                                                  value={el.w ?? 50}
-                                                  onChange={(e) => updateEditorElement(el.id, { w: Math.max(10, parseFloat(e.target.value) || 50) })}
-                                                  className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
-                                                />
-                                              </div>
-                                              <div className="space-y-1.5">
-                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Altura (mm)</label>
-                                                <input
-                                                  type="number"
-                                                  step="0.5"
-                                                  min="5"
-                                                  value={el.h ?? 10}
-                                                  onChange={(e) => updateEditorElement(el.id, { h: Math.max(5, parseFloat(e.target.value) || 10) })}
-                                                  className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
-                                                />
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          {/* Estilo do Texto */}
-                                          <div className="glass-card rounded-xl p-5 border-white/10 bg-white/[0.03] space-y-4">
-                                            <div className="flex items-center gap-2 mb-3">
-                                              <Type size={14} className="text-accent" />
-                                              <span className="text-[10px] font-black text-white uppercase tracking-widest">Estilo</span>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-3">
-                                              <button
-                                                onClick={() => updateEditorElement(el.id, { bold: !el.bold })}
-                                                className={`py-3 px-4 rounded-xl border text-[10px] font-black transition-all ${el.bold ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 text-white/40 border-white/10 hover:bg-white/5 hover:text-white"}`}
-                                              >
-                                                <div className="flex flex-col items-center gap-1">
-                                                  <span className="text-lg leading-none">B</span>
-                                                  <span>Bold</span>
-                                                </div>
-                                              </button>
-                                              <button
-                                                onClick={() => updateEditorElement(el.id, { italic: !el.italic })}
-                                                className={`py-3 px-4 rounded-xl border text-[10px] font-black transition-all ${el.italic ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 text-white/40 border-white/10 hover:bg-white/5 hover:text-white"}`}
-                                              >
-                                                <div className="flex flex-col items-center gap-1">
-                                                  <span className="text-lg leading-none italic">I</span>
-                                                  <span>Italic</span>
-                                                </div>
-                                              </button>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                              <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Alinhamento</label>
-                                              <div className="grid grid-cols-3 gap-2">
-                                                {(["left", "center", "right"] as const).map((a) => (
-                                                  <button
-                                                    key={a}
-                                                    onClick={() => updateEditorElement(el.id, { align: a })}
-                                                    className={`p-2.5 rounded-xl border transition-all flex items-center justify-center ${el.align === a || (!el.align && a === "center") ? "bg-accent/20 border-accent/40 text-accent" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
-                                                  >
-                                                    {a === "left" ? <AlignLeft size={16} /> : a === "center" ? <AlignCenter size={16} /> : <AlignRight size={16} />}
-                                                  </button>
-                                                ))}
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          {/* Fonte */}
-                                          <div className="glass-card rounded-xl p-5 border-white/10 bg-white/[0.03] space-y-4">
-                                            <div className="flex items-center gap-2 mb-3">
-                                              <Type size={14} className="text-accent" />
-                                              <span className="text-[10px] font-black text-white uppercase tracking-widest">Fonte</span>
-                                            </div>
-                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Fonte</label>
-                                            <button
-                                              onClick={() => setShowFontMenu(!showFontMenu)}
-                                              className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2.5 outline-none flex items-center justify-between group hover:border-accent/40 transition-all"
-                                            >
-                                              <span style={{ fontFamily: el.fontFamily || "Inter" }}>
-                                                {el.fontFamily || "Inter"}
-                                              </span>
-                                              <ChevronDown size={14} className={`text-white/20 group-hover:text-accent transition-transform ${showFontMenu ? 'rotate-180' : ''}`} />
-                                            </button>
-
-                                            <AnimatePresence>
-                                              {showFontMenu && (
-                                                <>
-                                                  <div
-                                                    className="fixed inset-0 z-[100]"
-                                                    onClick={() => setShowFontMenu(false)}
-                                                  />
-                                                  <motion.div
-                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                    className="absolute bottom-full left-0 w-full mb-2 bg-[#0A0F1E] border border-white/10 rounded-2xl shadow-2xl z-[101] overflow-hidden max-h-[280px] overflow-y-auto custom-scrollbar"
-                                                  >
-                                                    <div className="p-2 space-y-1">
-                                                      {fonts.map((f) => (
-                                                        <button
-                                                          key={f.name}
-                                                          onClick={() => {
-                                                            updateEditorElement(el.id, { fontFamily: f.name });
-                                                            setShowFontMenu(false);
-                                                          }}
-                                                          className={`w-full text-left px-4 py-3 rounded-xl transition-all flex items-center justify-between group ${
-                                                            (el.fontFamily || "Inter") === f.name
-                                                              ? "bg-accent text-black"
-                                                              : "text-white/60 hover:bg-white/5 hover:text-white"
-                                                          }`}
-                                                        >
-                                                          <span style={{ fontFamily: f.family, fontSize: '14px' }}>
-                                                            {f.name}
-                                                          </span>
-                                                          {(el.fontFamily || "Inter") === f.name && (
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-black" />
-                                                          )}
-                                                        </button>
-                                                      ))}
-                                                    </div>
-                                                  </motion.div>
-                                                </>
-                                              )}
-                                            </AnimatePresence>
-                                          </div>
-                                        </>
-                                      )}
-
-                                      {el.type === "barcode" && (
-                                        <div className="grid grid-cols-2 gap-2">
-                                          <div className="space-y-1.5">
-                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Formato</label>
-                                            <select value={el.bcFormat || "CODE128"} onChange={(e) => updateEditorElement(el.id, { bcFormat: e.target.value })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none focus:border-accent">
-                                              <option value="CODE128">CODE 128</option>
-                                              <option value="CODE39">CODE 39</option>
-                                              <option value="EAN13">EAN-13</option>
-                                              <option value="EAN8">EAN-8</option>
-                                              <option value="ITF14">ITF-14</option>
-                                              <option value="UPC">UPC-A</option>
-                                            </select>
-                                          </div>
-                                          <div className="space-y-1.5">
-                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Tam. Fonte</label>
-                                            <input
-                                              type="number"
-                                              step="0.1"
-                                              min="0.1"
-                                              value={el.bcFontSize ?? 2.8}
-                                              onChange={(e) => {
-                                                const val = parseFloat(e.target.value);
-                                                updateEditorElement(el.id, { bcFontSize: isNaN(val) ? 2.8 : val });
-                                              }}
-                                              className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none focus:border-accent"
-                                            />
-                                          </div>
-                                          <div className="space-y-1.5">
-                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Dist. Números</label>
-                                            <input
-                                              type="number"
-                                              step="0.1"
-                                              value={el.bcLabelDist ?? 1}
-                                              onChange={(e) => {
-                                                const val = parseFloat(e.target.value);
-                                                updateEditorElement(el.id, { bcLabelDist: isNaN(val) ? 1 : val });
-                                              }}
-                                              className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none focus:border-accent"
-                                            />
-                                          </div>
-                                        </div>
-                                      )}
-
-                                      {(el.type === "line" || el.type === "rect") && (
-                                        <>
-                                          {/* Dimensões e Orientação da Shape */}
-                                          <div className="glass-card rounded-xl p-5 border-white/10 bg-white/[0.03] space-y-4">
-                                            <div className="flex items-center gap-2 mb-1">
-                                              <Minus size={14} className="text-accent" />
-                                              <span className="text-[10px] font-black text-white uppercase tracking-widest">Dimensões & Orientação</span>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-3">
-                                              <div className="space-y-1.5">
-                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Largura (mm)</label>
-                                                <input
-                                                  type="number"
-                                                  step="1"
-                                                  min="5"
-                                                  value={el.w ?? 20}
-                                                  onChange={(e) => updateEditorElement(el.id, { w: Math.max(5, parseFloat(e.target.value) || 20) })}
-                                                  className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
-                                                />
-                                              </div>
-                                              <div className="space-y-1.5">
-                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Altura (mm)</label>
-                                                <input
-                                                  type="number"
-                                                  step="1"
-                                                  min="5"
-                                                  value={el.h ?? 10}
-                                                  onChange={(e) => updateEditorElement(el.id, { h: Math.max(5, parseFloat(e.target.value) || 10) })}
-                                                  className="w-full bg-black/40 border border-white/10 text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-accent/40 transition-all"
-                                                />
-                                              </div>
-                                            </div>
-
-                                            {el.type === "line" && (
-                                              <>
-                                                <div className="space-y-1.5 pt-2">
-                                                  <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Orientação</label>
-                                                  <div className="grid grid-cols-3 gap-2">
-                                                    <button
-                                                      onClick={() => updateEditorElement(el.id, { rotation: 0, h: Math.max(el.w ?? 20, el.h ?? 10) })}
-                                                      className={`py-2 rounded-xl border text-[9px] font-black transition-all ${el.rotation === 180 || el.rotation === -180 ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
-                                                    >
-                                                      Horizontal
-                                                    </button>
-                                                    <button
-                                                      onClick={() => updateEditorElement(el.id, { rotation: 90, w: Math.max(el.w ?? 20, el.h ?? 10) })}
-                                                      className={`py-2 rounded-xl border text-[9px] font-black transition-all ${el.rotation === 90 || el.rotation === -90 ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
-                                                    >
-                                                      Vertical
-                                                    </button>
-                                                    <button
-                                                      onClick={() => updateEditorElement(el.id, { rotation: 45 })}
-                                                      className={`py-2 rounded-xl border text-[9px] font-black transition-all ${el.rotation === 45 || el.rotation === -135 ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
-                                                    >
-                                                      Diagonal
-                                                    </button>
-                                                  </div>
-                                                </div>
-
-                                                <div className="space-y-1.5">
-                                                  <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Estilo da Linha</label>
-                                                  <div className="grid grid-cols-3 gap-2">
-                                                    <button
-                                                      onClick={() => {
-                                                        updateEditorElement(el.id, {
-                                                          strokeDasharray: undefined,
-                                                          lineDash: undefined
-                                                        });
-                                                      }}
-                                                      className={`py-2 px-2 rounded-xl border text-[9px] font-black transition-all flex flex-col items-center gap-1 ${!el.strokeDasharray ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
-                                                    >
-                                                      <div className="h-4 border-b-2 border-current" />
-                                                      <span>Sólida</span>
-                                                    </button>
-                                                    <button
-                                                      onClick={() => updateEditorElement(el.id, { strokeDasharray: [4, 4] })}
-                                                      className={`py-2 px-2 rounded-xl border text-[9px] font-black transition-all flex flex-col items-center gap-1 ${JSON.stringify(el.strokeDasharray) === JSON.stringify([4, 4]) ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
-                                                    >
-                                                      <div className="h-4 flex items-center justify-between" style={{ gap: '6px' }}>
-                                                        <div className="h-2 w-3 border-b-2 border-current" />
-                                                        <div className="h-2 w-3 border-[1px] border-dashed border-current" />
-                                                      </div>
-                                                      <span>Pontuada</span>
-                                                    </button>
-                                                    <button
-                                                      onClick={() => updateEditorElement(el.id, { strokeDasharray: [10, 5] })}
-                                                      className={`py-2 px-2 rounded-xl border text-[9px] font-black transition-all flex flex-col items-center gap-1 ${JSON.stringify(el.strokeDasharray) === JSON.stringify([10, 5]) ? "bg-accent text-black border-accent shadow-lg shadow-accent/20" : "bg-black/40 border-white/10 text-white/40 hover:text-white"}`}
-                                                    >
-                                                      <div className="h-4 flex items-center justify-between" style={{ gap: '4px' }}>
-                                                        <div className="h-2 w-6 border-b-2 border-current" />
-                                                        <div className="h-2 w-3 border-b-[3px] border-current" />
-                                                      </div>
-                                                      <span>Pontilhada</span>
-                                                    </button>
-                                                  </div>
-                                                </div>
-
-                                                <div className="space-y-1.5">
-                                                  <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Espessura da Linha</label>
-                                                  <div className="flex items-center gap-3">
-                                                    <input
-                                                      type="range"
-                                                      min="0.5"
-                                                      max="20"
-                                                      step="0.5"
-                                                      value={el.strokeWidth ?? 1}
-                                                      onChange={(e) => updateEditorElement(el.id, { strokeWidth: parseFloat(e.target.value) })}
-                                                      className="flex-1 h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-accent"
-                                                    />
-                                                    <span className="text-sm font-bold text-white w-12 text-right">{el.strokeWidth?.toFixed(1)}mm</span>
-                                                  </div>
-                                                </div>
-
-                                                {/* Presets de Comprimento */}
-                                                <div className="space-y-1.5 pt-2">
-                                                  <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Presets Rápidos</label>
-                                                  <div className="grid grid-cols-4 gap-2">
-                                                    <button
-                                                      onClick={() => updateEditorElement(el.id, { w: 50 })}
-                                                      className="py-2 px-2 rounded-xl border text-[8px] font-bold bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white transition-all"
-                                                    >
-                                                      Curta
-                                                    </button>
-                                                    <button
-                                                      onClick={() => updateEditorElement(el.id, { w: 80 })}
-                                                      className="py-2 px-2 rounded-xl border text-[8px] font-bold bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white transition-all"
-                                                    >
-                                                      Média
-                                                    </button>
-                                                    <button
-                                                      onClick={() => updateEditorElement(el.id, { w: 100, h: 5 })}
-                                                      className="py-2 px-2 rounded-xl border text-[8px] font-bold bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white transition-all"
-                                                    >
-                                                      Longa
-                                                    </button>
-                                                    <button
-                                                      onClick={() => updateEditorElement(el.id, { rotation: 0, w: 90 })}
-                                                      className="py-2 px-2 rounded-xl border text-[8px] font-bold bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white transition-all"
-                                                    >
-                                                      Cheia
-                                                    </button>
-                                                  </div>
-                                                </div>
-                                              </>
-                                            )}
-                                          </div>
-
-                                          {/* Estilo da Shape */}
-                                          {el.type === "rect" && (
-                                            <div className="glass-card rounded-xl p-5 border-white/10 bg-white/[0.03] space-y-4">
-                                              <div className="flex items-center gap-2 mb-3">
-                                                <SquareIcon size={14} className="text-accent" />
-                                                <span className="text-[10px] font-black text-white uppercase tracking-widest">Estilo</span>
-                                              </div>
-
-                                              <button
-                                                onClick={() => updateEditorElement(el.id, { fill: !el.fill })}
-                                                className={`w-full py-4 px-4 rounded-xl border text-sm font-black transition-all flex items-center justify-center gap-2 ${
-                                                  el.fill
-                                                    ? "bg-accent text-black border-accent shadow-lg shadow-accent/20"
-                                                    : "bg-black/40 text-white/40 border-white/10 hover:bg-white/5 hover:text-white"
-                                                }`}
-                                              >
-                                                <div className={`w-6 h-6 rounded border-2 ${el.fill ? "bg-current" : "bg-transparent"}`} />
-                                                <span>{el.fill ? "Preenchido" : "Contorno"}</span>
-                                              </button>
-
-                                              <div className="space-y-1.5">
-                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Cor da Borda</label>
-                                                <input
-                                                  type="color"
-                                                  value={el.color ?? "#000000"}
-                                                  onChange={(e) => updateEditorElement(el.id, { color: e.target.value })}
-                                                  className="w-full h-10 rounded-xl bg-transparent border border-white/10 cursor-pointer"
-                                                />
-                                              </div>
-
-                                              {/* Efeito 3D - Sombra */}
-                                              <div className="space-y-1.5">
-                                                <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">Efeito 3D</label>
-                                                <button
-                                                  onClick={() => updateEditorElement(el.id, { fill: true, color: "#0096DA" })}
-                                                  className="w-full py-2 px-4 rounded-xl border text-[10px] font-bold bg-[#0096DA]/20 border-[#0096DA]/40 text-[#0096DA] hover:bg-[#0096DA]/30 transition-all"
-                                                >
-                                                  Aplicar Azul 3D
-                                                </button>
-                                              </div>
-                                            </div>
-                                          )}
-                                        </>
-                                      )}
-
-                                      {el.type === "image" && (
-                                        <div className="grid grid-cols-2 gap-2">
-                                          <div className="space-y-1.5">
-                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">W (mm)</label>
-                                            <input type="number" value={el.w} onChange={(e) => updateEditorElement(el.id, { w: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
-                                          </div>
-                                          <div className="space-y-1.5">
-                                            <label className="text-[9px] font-bold text-white/40 uppercase tracking-widest ml-1">H (mm)</label>
-                                            <input type="number" value={el.h} onChange={(e) => updateEditorElement(el.id, { h: Number(e.target.value) })} className="w-full bg-black/40 border border-white/10 text-[11px] text-white rounded-xl px-3 py-2 outline-none" />
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
+                                    )}
                                   </div>
                                 </div>
+                              </div>
                             );
                           })()}
                         </motion.div>
-                      )}
+                      );
+                    })()}
                     </AnimatePresence>
                   </div>
                   <div className="mt-auto pt-6 flex gap-3 border-t border-white/5">
@@ -1901,10 +2726,10 @@ export default function App() {
                       Cancelar
                     </button>
                     <button
-                      onClick={handleAddTemplate}
+                      onClick={handleSaveToSource}
                       className="flex-1 bg-accent/10 border border-accent/20 text-accent hover:bg-accent/20 font-bold rounded-xl py-2.5 transition-all text-xs"
                     >
-                      Salvar Modelo
+                      Salvar no Código
                     </button>
                   </div>
                 </div>
@@ -1923,8 +2748,19 @@ export default function App() {
                       columns={1}
                       gap={config.gap}
                       onUpdateElement={updateEditorElement}
-                      selectedId={selectedId}
-                      onSelectElement={setSelectedId}
+                      selectedIds={selectedIds}
+                      onSelectElement={(id) => {
+                        if (id === null) {
+                          setSelectedIds(new Set());
+                        } else {
+                          // Se Shift está pressionado, lida lá no componente, 
+                          // ou passamos info de Shift?
+                          // O componente LabelPreview já gerencia shift se deixarmos.
+                          // Mas queremos que o estado venha daqui.
+                          setSelectedIds(new Set([id]));
+                        }
+                      }}
+                      onSelectMultiple={(ids) => setSelectedIds(ids)}
                       onRemoveElement={removeEditorElement}
                       onInteractionEnd={() =>
                         pushToHistory(editorData.elements)
@@ -1948,7 +2784,7 @@ export default function App() {
                         const newElements = [...editorData.elements, newEl];
                         setEditorData((p) => ({ ...p, elements: newElements }));
                         pushToHistory(newElements);
-                        setSelectedId(id);
+                        setSelectedIds(new Set([id]));
                       }}
                     />
                   </div>
@@ -1966,7 +2802,10 @@ export default function App() {
                 <div className="max-w-4xl mx-auto space-y-10">
                   <div className="flex flex-col gap-2">
                     <h2 className="text-3xl font-black text-white tracking-tight uppercase">
-                      Configurações <span className="text-accent underline decoration-accent/20 decoration-4 underline-offset-8">Gerais</span>
+                      Configurações{" "}
+                      <span className="text-accent underline decoration-accent/20 decoration-4 underline-offset-8">
+                        Gerais
+                      </span>
                     </h2>
                     <p className="text-white/30 text-xs font-bold uppercase tracking-[0.2em]">
                       Sincronização e Padrões do Sistema
@@ -1981,35 +2820,39 @@ export default function App() {
                       </label>
                       <div className="glass-card rounded-[2.5rem] p-10 flex flex-col items-center text-center border-white/5 bg-white/[0.01] relative overflow-hidden group">
                         <div className="absolute inset-0 bg-gradient-to-b from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                        
+
                         {localIp ? (
                           <>
                             <div className="relative group/qr">
                               <div className="absolute -inset-4 bg-accent/20 rounded-[3rem] blur-2xl opacity-0 group-hover/qr:opacity-100 transition-opacity duration-700" />
                               <div className="bg-white p-5 rounded-[2.5rem] shadow-2xl relative transition-all duration-700 scale-100 group-hover/qr:scale-105 border-4 border-accent/10">
-                                <img 
-                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`http://${localIp}:3003`)}`} 
+                                <img
+                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`http://${localIp}:3003`)}`}
                                   alt="QR Code"
                                   className="w-40 h-40"
                                   crossOrigin="anonymous"
                                 />
                               </div>
                             </div>
-                            
+
                             <div className="mt-8 space-y-6 z-10">
                               <div className="space-y-2">
-                                <p className="text-xl font-black text-accent uppercase tracking-tighter">Conector Ativo</p>
+                                <p className="text-xl font-black text-accent uppercase tracking-tighter">
+                                  Conector Ativo
+                                </p>
                                 <p className="text-[10px] text-white/40 font-bold uppercase leading-relaxed tracking-widest max-w-[240px]">
-                                  Escaneie o código acima com o coletor para iniciar a operação remota
+                                  Escaneie o código acima com o coletor para
+                                  iniciar a operação remota
                                 </p>
                               </div>
-
                             </div>
                           </>
                         ) : (
                           <div className="py-20 flex flex-col items-center gap-4">
                             <div className="w-12 h-12 rounded-full border-4 border-accent/20 border-t-accent animate-spin" />
-                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Buscando IP...</p>
+                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">
+                              Buscando IP...
+                            </p>
                           </div>
                         )}
                       </div>
@@ -2025,35 +2868,85 @@ export default function App() {
                           <Field
                             label="X-Offset (mm)"
                             value={(config.offsetX || 0).toString()}
-                            onChange={(v) => setConfig((p: any) => ({ ...p, offsetX: Number(v) }))}
+                            onChange={(v) =>
+                              setConfig((p: any) => ({
+                                ...p,
+                                offsetX: Number(v),
+                              }))
+                            }
                           />
                           <Field
                             label="Y-Offset (mm)"
                             value={(config.offsetY || 0).toString()}
-                            onChange={(v) => setConfig((p: any) => ({ ...p, offsetY: Number(v) }))}
+                            onChange={(v) =>
+                              setConfig((p: any) => ({
+                                ...p,
+                                offsetY: Number(v),
+                              }))
+                            }
                           />
                         </div>
-                        
+
                         <div className="pt-6 border-t border-white/5 space-y-4">
-                           <div className="flex items-center gap-3">
-                              <SquareIcon size={16} className="text-white/20" />
-                              <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Padrão 1 Coluna</span>
-                           </div>
-                           <div className="grid grid-cols-2 gap-4">
-                              <Field label="L (mm)" value={config.width1.toString()} onChange={(v) => setConfig((p:any) => ({...p, width1: Number(v)}))} />
-                              <Field label="A (mm)" value={config.height1.toString()} onChange={(v) => setConfig((p:any) => ({...p, height1: Number(v)}))} />
-                           </div>
+                          <div className="flex items-center gap-3">
+                            <SquareIcon size={16} className="text-white/20" />
+                            <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">
+                              Padrão 1 Coluna
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <Field
+                              label="L (mm)"
+                              value={config.width1.toString()}
+                              onChange={(v) =>
+                                setConfig((p: any) => ({
+                                  ...p,
+                                  width1: Number(v),
+                                }))
+                              }
+                            />
+                            <Field
+                              label="A (mm)"
+                              value={config.height1.toString()}
+                              onChange={(v) =>
+                                setConfig((p: any) => ({
+                                  ...p,
+                                  height1: Number(v),
+                                }))
+                              }
+                            />
+                          </div>
                         </div>
 
                         <div className="pt-4 space-y-4">
-                           <div className="flex items-center gap-3">
-                              <Columns size={16} className="text-white/20" />
-                              <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Padrão 2 Colunas</span>
-                           </div>
-                           <div className="grid grid-cols-2 gap-4">
-                              <Field label="L (mm)" value={config.width2.toString()} onChange={(v) => setConfig((p:any) => ({...p, width2: Number(v)}))} />
-                              <Field label="A (mm)" value={config.height2.toString()} onChange={(v) => setConfig((p:any) => ({...p, height2: Number(v)}))} />
-                           </div>
+                          <div className="flex items-center gap-3">
+                            <Columns size={16} className="text-white/20" />
+                            <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">
+                              Padrão 2 Colunas
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <Field
+                              label="L (mm)"
+                              value={config.width2.toString()}
+                              onChange={(v) =>
+                                setConfig((p: any) => ({
+                                  ...p,
+                                  width2: Number(v),
+                                }))
+                              }
+                            />
+                            <Field
+                              label="A (mm)"
+                              value={config.height2.toString()}
+                              onChange={(v) =>
+                                setConfig((p: any) => ({
+                                  ...p,
+                                  height2: Number(v),
+                                }))
+                              }
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2066,19 +2959,27 @@ export default function App() {
                         <LayoutDashboard size={24} />
                       </div>
                       <div>
-                        <h3 className="font-bold text-white">Interface Visual</h3>
-                        <p className="text-xs text-white/40 font-medium">Escolha o estilo de fundo do DonlyX</p>
+                        <h3 className="font-bold text-white">
+                          Interface Visual
+                        </h3>
+                        <p className="text-xs text-white/40 font-medium">
+                          Escolha o estilo de fundo do DonlyX
+                        </p>
                       </div>
                     </div>
                     <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
                       <button
-                        onClick={() => setConfig((p: any) => ({ ...p, theme: "dark" }))}
+                        onClick={() =>
+                          setConfig((p: any) => ({ ...p, theme: "dark" }))
+                        }
                         className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${config.theme === "dark" ? "bg-accent text-black shadow-lg" : "text-white/40 hover:text-white"}`}
                       >
                         Sólido
                       </button>
                       <button
-                        onClick={() => setConfig((p: any) => ({ ...p, theme: "glass" }))}
+                        onClick={() =>
+                          setConfig((p: any) => ({ ...p, theme: "glass" }))
+                        }
                         className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${config.theme === "glass" ? "bg-accent text-black shadow-lg" : "text-white/40 hover:text-white"}`}
                       >
                         Vidro

@@ -142,11 +142,227 @@ fn get_local_ip() -> String {
     "127.0.0.1".to_string()
 }
 
+#[tauri::command]
+fn save_template_to_source(template_id: String, template_json: String) -> Result<String, String> {
+    use std::fs;
+
+    // Caminho para o arquivo App.tsx
+    let app_path = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_default();
+
+    // Tenta encontrar o diretório do projeto (procura por src/App.tsx)
+    let mut project_dir = app_path.clone();
+    for _ in 0..10 {
+        let test_path = project_dir.join("src").join("App.tsx");
+        if test_path.exists() {
+            break;
+        }
+        if let Some(parent) = project_dir.parent() {
+            project_dir = parent.to_path_buf();
+        } else {
+            return Err("Não foi possível encontrar o diretório do projeto".into());
+        }
+    }
+
+    let app_tsx_path = project_dir.join("src").join("App.tsx");
+
+    if !app_tsx_path.exists() {
+        return Err("Arquivo App.tsx não encontrado".into());
+    }
+
+    // Lê o conteúdo do arquivo
+    let content = fs::read_to_string(&app_tsx_path)
+        .map_err(|e| format!("Erro ao ler arquivo: {}", e))?;
+
+    // Encontra o bloco do template no DEFAULT_TEMPLATES
+    let search_id = format!("id: \"{}\"", template_id);
+    if let Some(start_pos) = content.find(&search_id) {
+        // Encontra o início do bloco (procura o '{' antes do id)
+        let before = &content[..start_pos];
+        let brace_start = before.rfind('{')
+            .ok_or("Não foi possível encontrar o início do template")?;
+
+        // Encontra o final do bloco (conta chaves)
+        let after_start = &content[brace_start..];
+        let mut brace_count = 0;
+        let mut end_pos = 0;
+        let mut in_string = false;
+        let mut escape_next = false;
+
+        for (i, ch) in after_start.char_indices() {
+            if escape_next {
+                escape_next = false;
+                continue;
+            }
+
+            match ch {
+                '\\' if in_string => escape_next = true,
+                '"' => in_string = !in_string,
+                '{' if !in_string => brace_count += 1,
+                '}' if !in_string => {
+                    brace_count -= 1;
+                    if brace_count == 0 {
+                        end_pos = i + 1;
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        if end_pos == 0 {
+            return Err("Não foi possível encontrar o final do template".into());
+        }
+
+        // Converte template_json para o formato usado no código Rust
+        let template_obj: serde_json::Value = serde_json::from_str(&template_json)
+            .map_err(|e| format!("Erro ao parsear template JSON: {}", e))?;
+
+        // Gera o código Rust formatado
+        let id = template_obj["id"].as_str().unwrap_or("");
+        let label = template_obj["label"].as_str().unwrap_or("");
+        let size = template_obj["size"].as_str().unwrap_or("");
+        let w = template_obj["w"].as_f64().unwrap_or(100.0);
+        let h = template_obj["h"].as_f64().unwrap_or(50.0);
+        let columns = template_obj["columns"].as_u64().unwrap_or(1);
+        let elements = &template_obj["elements"];
+
+        // Formata os elementos como código Rust
+        let elements_code = format_elements_rust(elements);
+
+        let new_template = format!(
+            r#"  {{
+    id: "{}",
+    label: "{}",
+    size: "{}",
+    w: {},
+    h: {},
+    columns: {},
+    elements: [
+{}
+    ],
+  }}"#,
+            id, label, size, w, h, columns, elements_code
+        );
+
+        // Substitui o template antigo pelo novo
+        let new_content = format!(
+            "{}{}{}",
+            &content[..brace_start],
+            new_template,
+            &content[brace_start + end_pos..]
+        );
+
+        // Escreve o conteúdo atualizado no arquivo
+        fs::write(&app_tsx_path, new_content)
+            .map_err(|e| format!("Erro ao escrever no arquivo: {}", e))?;
+
+        Ok("Template salvo com sucesso".into())
+    } else {
+        Err(format!("Template com id '{}' não encontrado", template_id))
+    }
+}
+
+fn format_elements_rust(elements: &serde_json::Value) -> String {
+    if let Some(arr) = elements.as_array() {
+        arr.iter()
+            .map(|el| {
+                let id = el["id"].as_str().unwrap_or("");
+                let el_type = el["type"].as_str().unwrap_or("text");
+                let x = el["x"].as_f64().unwrap_or(0.0);
+                let y = el["y"].as_f64().unwrap_or(0.0);
+                let content = el["content"].as_str().unwrap_or("");
+
+                let mut fields = vec![
+                    format!(r#"        id: "{}","#, id),
+                    format!(r#"        type: "{}","#, el_type),
+                    format!(r#"        x: {},"#, x),
+                    format!(r#"        y: {},"#, y),
+                    format!(r#"        content: "{}","#, content),
+                ];
+
+                if let Some(w) = el["w"].as_f64() {
+                    fields.push(format!(r#"        w: {},"#, w));
+                }
+                if let Some(h) = el["h"].as_f64() {
+                    fields.push(format!(r#"        h: {},"#, h));
+                }
+                if let Some(font_size) = el["fontSize"].as_f64() {
+                    fields.push(format!(r#"        fontSize: {},"#, font_size));
+                }
+                if let Some(bold) = el["bold"].as_bool() {
+                    fields.push(format!(r#"        bold: {},"#, bold));
+                }
+                if let Some(italic) = el["italic"].as_bool() {
+                    fields.push(format!(r#"        italic: {},"#, italic));
+                }
+                if let Some(align) = el["align"].as_str() {
+                    fields.push(format!(r#"        align: "{}","#, align));
+                }
+                if let Some(font_family) = el["fontFamily"].as_str() {
+                    fields.push(format!(r#"        fontFamily: "{}","#, font_family));
+                }
+                if let Some(field_binding) = el["fieldBinding"].as_str() {
+                    fields.push(format!(r#"        fieldBinding: "{}","#, field_binding));
+                }
+                if let Some(bc_format) = el["bcFormat"].as_str() {
+                    fields.push(format!(r#"        bcFormat: "{}","#, bc_format));
+                }
+                if let Some(bc_font_size) = el["bcFontSize"].as_f64() {
+                    fields.push(format!(r#"        bcFontSize: {},"#, bc_font_size));
+                }
+                if let Some(bc_label_dist) = el["bcLabelDist"].as_f64() {
+                    fields.push(format!(r#"        bcLabelDist: {},"#, bc_label_dist));
+                }
+                if let Some(line_height) = el["lineHeight"].as_f64() {
+                    fields.push(format!(r#"        lineHeight: {},"#, line_height));
+                }
+                if let Some(rotation) = el["rotation"].as_f64() {
+                    fields.push(format!(r#"        rotation: {},"#, rotation));
+                }
+                if let Some(stroke_width) = el["strokeWidth"].as_f64() {
+                    fields.push(format!(r#"        strokeWidth: {},"#, stroke_width));
+                }
+                if let Some(fill) = el["fill"].as_bool() {
+                    fields.push(format!(r#"        fill: {},"#, fill));
+                }
+                if let Some(color) = el["color"].as_str() {
+                    fields.push(format!(r#"        color: "{}","#, color));
+                }
+
+                // Remove trailing comma from last field
+                if let Some(last) = fields.last_mut() {
+                    if last.ends_with(',') {
+                        last.pop();
+                    }
+                }
+
+                format!(
+                    "      {{\n{}\n      }}",
+                    fields.join("\n")
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",\n")
+    } else {
+        String::new()
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![get_printers, print_raw, print_label, update_templates, get_local_ip])
+        .invoke_handler(tauri::generate_handler![
+            get_printers,
+            print_raw,
+            print_label,
+            update_templates,
+            get_local_ip,
+            save_template_to_source
+        ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
 
