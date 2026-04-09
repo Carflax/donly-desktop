@@ -199,7 +199,7 @@ type Template = {
 };
 
 const DEFAULT_TEMPLATES: Template[] = [
-  {
+                {
     id: "padrao",
     label: "Padrão",
     size: "100x50mm",
@@ -210,46 +210,93 @@ const DEFAULT_TEMPLATES: Template[] = [
       {
         id: "p1",
         type: "text",
-        x: 50,
-        y: 9,
+        x: 50.040841049361504,
+        y: 10.011163704777182,
         content: "DESCRIÇÃO DO PRODUTO",
-        w: 97.57379726095893,
-        h: 17.039075193044308,
-        fontSize: 7,
+        w: 90.43260577436344,
+        h: 15.79202627085673,
+        fontSize: 6.5,
         bold: false,
         align: "center",
         fontFamily: "Impact",
         fieldBinding: "ITE_DESITE",
-        lineHeight: 1.1,
-      },
-      {
-        id: "p3",
-        type: "text",
-        x: 50,
-        y: 21,
-        content: "CODIGO",
-        w: 28.5609111368083,
-        h: 7.418294799710182,
-        fontSize: 7,
-        bold: false,
-        align: "center",
-        fieldBinding: "ITE_CODITE",
+        lineHeight: 1.1
       },
       {
         id: "p4",
         type: "barcode",
-        x: 13,
-        y: 27,
+        x: 12,
+        y: 28,
         content: "7891960280044",
         w: 80.08168209872301,
         h: 19.73845379463832,
         fieldBinding: "ITE_CODBAR",
         bcFormat: "EAN13",
-        bcLabelDist: -0.6,
+        bcLabelDist: -0.6
       },
+      {
+        id: "txwuj09pn",
+        type: "text",
+        x: 27.03476750008822,
+        y: 21.73155885933641,
+        content: "CODIGO",
+        w: 25.83045556840414,
+        h: 6.709097384862028,
+        fontSize: 4.5,
+        bold: true,
+        align: "left",
+        fieldBinding: "ITE_CODITE"
+      },
+      {
+        id: "ivjevdid4",
+        type: "image",
+        x: 19.3860034618265,
+        y: 17.907176840205548,
+        content: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0zMiAxMCBMMTIgMjAgTDMyIDMwIEw1MiAyMCBaIi8+PHBhdGggZD0iTTEyIDIwIFY0NCBMMzIgNTQgVjMwIi8+PHBhdGggZD0iTTUyIDIwIFY0NCBMMzIgNTQiLz48L3N2Zz4=",
+        w: 7.648764038261717,
+        h: 7.648764038261717,
+        fontSize: 12,
+        rotation: 0
+      },
+      {
+        id: "mag0jicjx",
+        type: "line",
+        x: 44.77689937478102,
+        y: 19.345901357525022,
+        content: "",
+        w: 9.54263000724552,
+        h: 4.77131500362276,
+        fontSize: 12,
+        rotation: 90,
+        strokeWidth: 8
+      },
+      {
+        id: "1xtzvqfy6",
+        type: "image",
+        x: 54.31952938202654,
+        y: 18.348550380491687,
+        content: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0xMiAxMCBIMzYgTDU0IDI4IEwzNiA0NiBIMTIgWiIvPjxjaXJjbGUgY3g9IjIyIiBjeT0iMTgiIHI9IjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIHN0cm9rZS13aWR0aD0iNCIvPjwvc3ZnPg==",
+        w: 6.766016957689438,
+        h: 6.766016957689438,
+        fontSize: 12,
+        rotation: 0
+      },
+      {
+        id: "fl541267a",
+        type: "text",
+        x: 61.568459684467555,
+        y: 21.73155885933641,
+        content: "MARCA",
+        w: 26.04049061212755,
+        h: 6.763651032158043,
+        fontSize: 4.5,
+        bold: true,
+        align: "left",
+        fieldBinding: "MARCA"
+      }
     ],
   },
-  {
+            {
     id: "padraozinha",
     label: "Padrãozinha",
     size: "50x30mm",
@@ -258,45 +305,61 @@ const DEFAULT_TEMPLATES: Template[] = [
     columns: 2,
     elements: [
       {
-        id: "pz3",
-        type: "text",
-        x: 25,
-        y: 13,
-        content: "CODIGO",
-        fontSize: 4.5,
-        bold: true,
-        align: "center",
-        fieldBinding: "ITE_CODITE",
-      },
-      {
         id: "pz4",
         type: "barcode",
-        x: 1,
-        y: 16,
+        x: 0.7147992088743749,
+        y: 17.364932649265175,
         content: "7891960819954",
         w: 48.57040158225125,
         h: 11.591137092982848,
         fieldBinding: "ITE_CODBAR",
+        bcFormat: "EAN13",
         bcFontSize: 2.4,
-        bcLabelDist: 0,
+        bcLabelDist: 0
       },
       {
         id: "qdohddb",
         type: "text",
         x: 25,
-        y: 5,
-        content: "CODIGO DO PRODUTO",
-        w: 44,
-        h: 7,
-        fontSize: 4,
+        y: 5.255491282218998,
+        content: "DESCRIÇÃO DO PRODUTO",
+        w: 46.365482844612615,
+        h: 7.376326816188371,
+        fontSize: 3.5,
         align: "center",
         fontFamily: "Impact",
         fieldBinding: "ITE_DESITE",
-        rotation: 0,
+        rotation: 0
       },
+      {
+        id: "5fe1cy5",
+        type: "text",
+        x: 21.23987832577051,
+        y: 13.718690595425464,
+        content: "CÓDIGO",
+        w: 15,
+        h: 4,
+        fontSize: 3,
+        bold: false,
+        align: "left",
+        fontFamily: "Impact",
+        fieldBinding: "ITE_CODITE",
+        rotation: 0
+      },
+      {
+        id: "gowu0ozc4",
+        type: "image",
+        x: 16.05319932493032,
+        y: 11.125351095005367,
+        content: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0zMiAxMCBMMTIgMjAgTDMyIDMwIEw1MiAyMCBaIi8+PHBhdGggZD0iTTEyIDIwIFY0NCBMMzIgNTQgVjMwIi8+PHBhdGggZD0iTTUyIDIwIFY0NCBMMzIgNTQiLz48L3N2Zz4=",
+        w: 5.186679000840192,
+        h: 5.186679000840192,
+        fontSize: 12,
+        rotation: 0
+      }
     ],
   },
-  {
+        {
     id: "despacho",
     label: "Despacho",
     size: "100x50mm",
@@ -305,53 +368,117 @@ const DEFAULT_TEMPLATES: Template[] = [
     columns: 1,
     elements: [
       {
-        id: "d2",
+        id: "1h9a6ul",
         type: "text",
         x: 50,
-        y: 8,
-        content: "Pedido: 000001061732",
-        fontSize: 6,
+        y: 6.646874837766035,
+        content: "CLIENTE",
+        w: 21,
+        h: 5,
+        fontSize: 4,
         bold: true,
         align: "center",
-        fieldBinding: "FGO_NUMDOC",
+        rotation: 0
       },
       {
-        id: "d3",
+        id: "st7whh7",
         type: "text",
         x: 50,
-        y: 22,
-        content: "Cliente: THYSSENKRUPP MET. CAMPO LIMPO LTDA",
-        w: 84.85442804798005,
-        h: 18.176286190870652,
-        fontSize: 5,
-        bold: true,
+        y: 14.146874837766036,
+        content: "NOME DO CLIENTE COMPLETO",
+        w: 91,
+        h: 10,
+        fontSize: 5.5,
+        bold: false,
         align: "center",
+        fontFamily: "Impact",
         fieldBinding: "CLI_NOMCLI",
+        rotation: 0
       },
       {
-        id: "d4",
+        id: "g0h63z7x6",
         type: "text",
-        x: 7,
-        y: 35,
-        content: "Conferente: ",
-        w: 86.97900623691277,
-        h: 12.32015899492815,
-        fontSize: 5,
-        bold: true,
-        align: "left",
-        fieldBinding: "NOME_CONFERENTE",
+        x: 19,
+        y: 23.646874837766035,
+        content: "PEDIDO:",
+        w: 21,
+        h: 5,
+        fontSize: 4,
+        bold: false,
+        align: "center",
+        fontFamily: "Impact",
+        rotation: 0
       },
       {
-        id: "d5",
+        id: "zu57wv7w0",
+        type: "text",
+        x: 25.93172968127854,
+        y: 23.646874837766035,
+        content: "000001061732",
+        w: 22.680280349787175,
+        h: 5.400066749949327,
+        fontSize: 4,
+        bold: false,
+        align: "left",
+        fieldBinding: "FGO_NUMDOC",
+        rotation: 0
+      },
+      {
+        id: "w032ycvuo",
+        type: "text",
+        x: 65.74912390691512,
+        y: 23.646874837766035,
+        content: "VOLUME",
+        w: 21,
+        h: 5,
+        fontSize: 4,
+        bold: false,
+        align: "center",
+        fontFamily: "Impact",
+        rotation: 0
+      },
+      {
+        id: "hadshsn37",
+        type: "text",
+        x: 74.56884355712793,
+        y: 23.646874837766035,
+        content: " 5",
+        w: 17.63943930042565,
+        h: 4.199866500101345,
+        fontSize: 4,
+        bold: false,
+        align: "left",
+        fieldBinding: "VOLUMES",
+        rotation: 0
+      },
+      {
+        id: "5od00bb8k",
         type: "text",
         x: 50,
-        y: 44,
-        content: "Volumes: 0",
-        fontSize: 5,
+        y: 32.9799096229852,
+        content: "CONFERENTE",
+        w: 21,
+        h: 5,
+        fontSize: 4,
         bold: true,
         align: "center",
-        fieldBinding: "VOLUMES",
+        rotation: 0
       },
+      {
+        id: "dy8zwbvvp",
+        type: "text",
+        x: 50,
+        y: 40.4799096229852,
+        content: "NOME DO CONFERENTE COMPLETO",
+        w: 91,
+        h: 10,
+        fontSize: 5.5,
+        bold: false,
+        align: "center",
+        fontFamily: "Impact",
+        fieldBinding: "NOME_CONFERENTE",
+        rotation: 0
+      }
     ],
   },
 ];
@@ -772,7 +899,7 @@ export default function App() {
         setTextDrawMode(false);
         return;
       }
-      if (document.activeElement?.tagName === "INPUT") return;
+      const activeTag = document.activeElement?.tagName; if (activeTag === "INPUT" || activeTag === "SELECT" || activeTag === "TEXTAREA") return;
       if (e.ctrlKey && e.key === "z") {
         e.preventDefault();
         undo();
@@ -938,15 +1065,15 @@ export default function App() {
       if (selectedTemplate === "despacho") {
         switch (field) {
           case "FGO_NUMDOC":
-            return `Pedido: ${produto.FGO_NUMDOC || ""}`;
+            return produto.FGO_NUMDOC || "";
           case "FGO_ESPDOC":
             return produto.FGO_ESPDOC || "";
           case "CLI_NOMCLI":
-            return `Cliente: ${produto.CLI_NOMCLI || ""}`;
+            return produto.CLI_NOMCLI || "";
           case "NOME_CONFERENTE":
-            return `Conferente: ${produto.NOME_CONFERENTE || ""}`;
+            return produto.NOME_CONFERENTE || "";
           case "VOLUMES":
-            return `Volumes: ${volumes || "1"}`;
+            return volumes || "1";
           default:
             return "";
         }
@@ -1028,19 +1155,19 @@ export default function App() {
               let content = "";
               switch (el.fieldBinding) {
                 case "FGO_NUMDOC":
-                  content = `Pedido: ${dados.FGO_NUMDOC || ""}`;
+                  content = dados.FGO_NUMDOC || "";
                   break;
                 case "CLI_NOMCLI":
-                  content = `Cliente: ${dados.CLI_NOMCLI || ""}`;
+                  content = dados.CLI_NOMCLI || "";
                   break;
                 case "NOME_CONFERENTE":
-                  content = `Conferente: ${dados.NOME_CONFERENTE || ""}`;
+                  content = dados.NOME_CONFERENTE || "";
                   break;
                 case "FGO_ESPDOC":
                   content = dados.FGO_ESPDOC || "";
                   break;
                 case "VOLUMES":
-                  content = `Volumes: ${volumes || "1"}`;
+                  content = volumes || "1";
                   break;
                 default:
                   content = el.content;
@@ -2768,6 +2895,7 @@ export default function App() {
                       gap={config.gap}
                       onUpdateElement={updateEditorElement}
                       selectedIds={selectedIds}
+                      selectedId={Array.from(selectedIds).pop() || null}
                       onSelectElement={(id) => {
                         if (id === null) {
                           setSelectedIds(new Set());
@@ -3039,3 +3167,4 @@ function Field({
     </div>
   );
 }
+

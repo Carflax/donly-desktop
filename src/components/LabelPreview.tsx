@@ -593,9 +593,15 @@ export default function LabelPreview({
         const h_mm = (20 * 25.4) / dpi;
         const threshold = 3; // mm
 
+        // Offset horizontal da borda esquerda do elemento (local space)
+        let rx = -w / 2;
+        if (el.type === "text" && el.align === "left") rx = 0;
+        else if (el.type === "text" && el.align === "right") rx = -w;
+
         // Check rotate handle
+        const rotTargetX = rx + w / 2;
         if (
-          Math.abs(localX - 0) < threshold &&
+          Math.abs(localX - rotTargetX) < threshold &&
           Math.abs(localY - (-h / 2 - h_mm)) < threshold
         ) {
           rotatingId.current = el.id;
@@ -604,7 +610,7 @@ export default function LabelPreview({
         }
 
         // Check delete handle
-        const delLX = w / 2 + (4 * 25.4) / dpi;
+        const delLX = rx + w + (4 * 25.4) / dpi;
         const delLY = -h / 2 - (4 * 25.4) / dpi;
         if (
           Math.abs(localX - delLX) < threshold &&
@@ -616,7 +622,7 @@ export default function LabelPreview({
 
         // Check resize handle
         if (
-          Math.abs(localX - w / 2) < threshold &&
+          Math.abs(localX - (rx + w)) < threshold &&
           Math.abs(localY - h / 2) < threshold
         ) {
           resizingId.current = el.id;
@@ -636,10 +642,15 @@ export default function LabelPreview({
           ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55)
           : el.w || 20;
       const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
-      const isInsideX =
-        el.type === "text"
-          ? mmX >= el.x - w / 2 && mmX <= el.x + w / 2
-          : mmX >= el.x && mmX <= el.x + w;
+      let isInsideX: boolean;
+      if (el.type === "text") {
+        const align = el.align || "center";
+        if (align === "left") isInsideX = mmX >= el.x && mmX <= el.x + w;
+        else if (align === "right") isInsideX = mmX >= el.x - w && mmX <= el.x;
+        else isInsideX = mmX >= el.x - w / 2 && mmX <= el.x + w / 2;
+      } else {
+        isInsideX = mmX >= el.x && mmX <= el.x + w;
+      }
       const isInsideY =
         el.type === "text"
           ? mmY >= el.y - h / 2 && mmY <= el.y + h / 2
@@ -885,18 +896,87 @@ export default function LabelPreview({
           ? (el.w ?? el.content.length * (el.fontSize || 4) * 0.55)
           : el.w || 20;
       const h = el.type === "text" ? (el.h ?? el.fontSize ?? 4) : el.h || 10;
-      const ecx = el.type === "text" ? fx : fx + w / 2;
-      const ecy = el.type === "text" ? fy : fy + h / 2;
+      
+      // Bordas do elemento sendo arrastado
+      const eLx = el.type === "text" ? fx - w / 2 : fx;
+      const eRx = el.type === "text" ? fx + w / 2 : fx + w;
+      const eCx = el.type === "text" ? fx : fx + w / 2;
 
-      if (Math.abs(ecx - cx) < snap) {
+      const eTy = el.type === "text" ? fy - h / 2 : fy;
+      const eBy = el.type === "text" ? fy + h / 2 : fy + h;
+      const eCy = el.type === "text" ? fy : fy + h / 2;
+
+      // Snapping ao centro da etiqueta (já existente)
+      if (Math.abs(eCx - cx) < snap) {
         fx = el.type === "text" ? cx : cx - w / 2;
         g.x = cx;
       }
-
-      if (Math.abs(ecy - cy) < snap) {
+      if (Math.abs(eCy - cy) < snap) {
         fy = el.type === "text" ? cy : cy - h / 2;
         g.y = cy;
       }
+
+      // Snapping a outros elementos
+      const otherElements = data.custom[data.activeTab]?.filter(
+        (it) => it.id !== draggingId.current && !selectedIds.has(it.id)
+      );
+
+      otherElements?.forEach((other) => {
+        const ow = other.type === "text" 
+          ? (other.w ?? other.content.length * (other.fontSize || 4) * 0.55)
+          : other.w || 20;
+        const oh = other.type === "text" ? (other.h ?? other.fontSize ?? 4) : other.h || 10;
+        
+        const oLx = other.type === "text" ? other.x - ow / 2 : other.x;
+        const oRx = other.type === "text" ? other.x + ow / 2 : other.x + ow;
+        const oCx = other.type === "text" ? other.x : other.x + ow / 2;
+
+        const oTy = other.type === "text" ? other.y - oh / 2 : other.y;
+        const oBy = other.type === "text" ? other.y + oh / 2 : other.y + oh;
+        const oCy = other.type === "text" ? other.y : other.y + oh / 2;
+
+        // Snapping X (Left, Center, Right)
+        const snapPointsX = [
+          { val: oLx, label: "left" },
+          { val: oRx, label: "right" },
+          { val: oCx, label: "center" }
+        ];
+        const myPointsX = [
+          { val: eLx, offset: el.type === "text" ? w/2 : 0 },
+          { val: eRx, offset: el.type === "text" ? -w/2 : -w },
+          { val: eCx, offset: el.type === "text" ? 0 : -w/2 }
+        ];
+
+        myPointsX.forEach(myP => {
+          snapPointsX.forEach(snapP => {
+            if (Math.abs(myP.val - snapP.val) < snap) {
+              fx = snapP.val + myP.offset;
+              g.x = snapP.val;
+            }
+          });
+        });
+
+        // Snapping Y (Top, Center, Bottom)
+        const snapPointsY = [
+          { val: oTy, label: "top" },
+          { val: oBy, label: "bottom" },
+          { val: oCy, label: "center" }
+        ];
+        const myPointsY = [
+          { val: eTy, offset: el.type === "text" ? h/2 : 0 },
+          { val: eBy, offset: el.type === "text" ? -h/2 : -h },
+          { val: eCy, offset: el.type === "text" ? 0 : -h/2 }
+        ];
+
+        myPointsY.forEach(myP => {
+          snapPointsY.forEach(snapP => {
+            if (Math.abs(myP.val - snapP.val) < snap) {
+              fy = snapP.val + myP.offset;
+              g.y = snapP.val;
+            }
+          });
+        });
+      });
     }
     setGuides(g);
 
